@@ -18,8 +18,11 @@ RUN apt-get update && \
     libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy only necessary files
+# Copy Python packages and binary
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+
+# Copy application files
 COPY ./app ./app
 COPY main.py .
 COPY .env.example .env
