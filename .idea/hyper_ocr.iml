@@ -3,6 +3,9 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/ocr_gemini_service/.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/ocr_gemini_service/.venv/Lib" />
+      <excludeFolder url="file://$MODULE_DIR$/ocr_gemini_service/.venv/Scripts" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.11 (hyper_ocr)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
