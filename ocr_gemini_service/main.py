@@ -1,6 +1,6 @@
 # app/main.py
 from fastapi import FastAPI
-from app.api.routes import ocr
+from app.api.routes import ocr, health
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -12,7 +12,7 @@ app = FastAPI(
 )
 
 app.include_router(ocr.router, prefix="/ocr", tags=["OCR"])
-
+app.include_router(health.router)
 @app.get("/")
 async def root():
     return {"message": f"Welcome to {settings.APP_NAME}!"}
