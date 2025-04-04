@@ -7,21 +7,23 @@ settings = get_settings()
 
 
 class GeminiService:
-    def __init__(self):
+    def __init__(self, api_key: str | None = None, model_name: str | None = None):
         self.model = None
+        self.api_key = api_key or settings.GOOGLE_API_KEY
+        self.model_name = model_name or settings.GEMINI_MODEL_NAME
         self._initialize_model()
 
     def _initialize_model(self):
-        if not settings.GOOGLE_API_KEY:
-            raise ValueError("GOOGLE_API_KEY is not set in environment variables")
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY is not set")
 
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        genai.configure(api_key=self.api_key)
         try:
-            self.model = genai.GenerativeModel(settings.GEMINI_MODEL_NAME)
+            self.model = genai.GenerativeModel(self.model_name)
         except Exception as e:
             raise ValueError(f"Failed to initialize Gemini model: {e}")
 
-    async def extract_text(self, image_data: bytes, content_type: str):
+    async def extract_text(self, image_data: bytes, content_type: str, prompt: str | None = None):
         if not self.model:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -32,10 +34,11 @@ class GeminiService:
             "mime_type": content_type,
             "data": image_data
         }
-        prompt = "Extract all visible text from this image. Returns only the text content."
+        default_prompt = "Extract all visible text from this image. Returns only the text content."
+        final_prompt = prompt or default_prompt
 
         try:
-            response = self.model.generate_content([prompt, image_part])
+            response = self.model.generate_content([final_prompt, image_part])
             return response.text
         except genai.types.generation_types.BlockedPromptException as e:
             raise HTTPException(
