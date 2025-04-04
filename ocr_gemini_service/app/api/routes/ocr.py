@@ -1,5 +1,5 @@
 # app/api/routes/ocr.py
-from fastapi import APIRouter, File, UploadFile, HTTPException, status
+from fastapi import APIRouter, File, UploadFile, HTTPException, status, Header
 from app.models.schemas import OCRResponse, ErrorResponse
 from app.services.gemini import GeminiService
 from app.core.config import get_settings
@@ -25,7 +25,7 @@ async def extract_text_from_image(
         file: UploadFile = File(..., description="Image file to process"),
         prompt: str | None = None,
         model_name: str | None = None,
-        api_key: str | None = None
+        x_api_key: str | None = Header(None, alias="X-API-Key")
 ):
     if file.content_type not in settings.ALLOWED_CONTENT_TYPES:
         raise HTTPException(
@@ -34,7 +34,7 @@ async def extract_text_from_image(
         )
 
     try:
-        service = GeminiService(api_key=api_key, model_name=model_name)
+        service = GeminiService(api_key=x_api_key, model_name=model_name)
         image_bytes = await file.read()
         img = Image.open(io.BytesIO(image_bytes))
         img.verify()
