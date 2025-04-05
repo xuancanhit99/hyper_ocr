@@ -5,3 +5,4 @@ __pycache__/
 .vscode/
 
 ocr_gemini_service/.env
+guidelines.md
