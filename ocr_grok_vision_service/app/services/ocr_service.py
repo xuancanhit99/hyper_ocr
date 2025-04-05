@@ -33,9 +33,9 @@ class OCRService:
         try:
             image_content = await image_file.read()
             mime_type, _ = mimetypes.guess_type(image_file.filename or "image.bin")
-            if mime_type not in ["image/jpeg", "image/png"]:
+            if mime_type not in settings.ALLOWED_CONTENT_TYPES:
                 mime_type = image_file.content_type
-                if mime_type not in ["image/jpeg", "image/png"]:
+                if mime_type not in settings.ALLOWED_CONTENT_TYPES:
                     raise HTTPException(
                         status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                         detail=f"Unsupported image type '{mime_type}'. Only JPEG and PNG are supported."

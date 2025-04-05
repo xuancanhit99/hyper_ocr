@@ -10,9 +10,11 @@ class Settings(BaseSettings):
     APP_NAME: str = "OCR Gemini Service"
     APP_VERSION: str = "1.0.0"
     APP_DESCRIPTION: str = "Using Google Gemini Models to Extract Text from Images"
+
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
     GEMINI_MODEL_NAME: str =  os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash-exp-image-generation")
-    ALLOWED_CONTENT_TYPES: list = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
+
+    ALLOWED_CONTENT_TYPES: list[str] = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
 
 @lru_cache()
 def get_settings():

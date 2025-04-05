@@ -2,12 +2,6 @@
 from pydantic import BaseModel
 
 
-class OCRRequest(BaseModel):
-    prompt: str | None = None
-    model_name: str | None = None
-    api_key: str | None = None
-
-
 class OCRResponse(BaseModel):
     filename: str
     content_type: str

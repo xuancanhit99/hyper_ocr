@@ -16,7 +16,6 @@ from typing import Annotated
 import mimetypes # Keep for MIME type guessing
 
 router = APIRouter()
-
 settings = get_settings()
 
 def get_ocr_service():
@@ -28,7 +27,6 @@ def get_ocr_service():
             detail=f"OCR Service initialization failed: {e}"
         )
 
-ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png"]
 
 @router.post(
     "/extract-text",
@@ -54,9 +52,9 @@ async def perform_ocr(
 
     # Check file type
     guessed_type = None
-    if file.content_type not in ALLOWED_CONTENT_TYPES:
+    if file.content_type not in settings.ALLOWED_CONTENT_TYPES:
          guessed_type, _ = mimetypes.guess_type(file.filename or "")
-         if guessed_type not in ALLOWED_CONTENT_TYPES:
+         if guessed_type not in settings.ALLOWED_CONTENT_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail=f"Unsupported file type: '{file.content_type or guessed_type}'. Only JPEG and PNG are supported."
@@ -70,9 +68,9 @@ async def perform_ocr(
             api_key=x_api_key
         )
         content_type = file.content_type
-        if content_type not in ALLOWED_CONTENT_TYPES:
+        if content_type not in settings.ALLOWED_CONTENT_TYPES:
             guessed_type, _ = mimetypes.guess_type(file.filename or "")
-            if guessed_type in ALLOWED_CONTENT_TYPES:
+            if guessed_type in settings.ALLOWED_CONTENT_TYPES:
                 content_type = guessed_type
             else:
                 content_type = "image/unknown"
