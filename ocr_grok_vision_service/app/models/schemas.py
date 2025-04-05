@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 
 class OCRResponse(BaseModel):
     filename: str = Field(..., description="Original filename of the uploaded image.")
-    text: str = Field(..., description="Text extracted from the image by the Grok model.")
+    content_type: str = Field(..., description="MIME type of the uploaded file.")
+    extracted_text: str = Field(..., description="Text extracted from the image by the Grok model.")
     model_used: str = Field(..., description="The specific Grok model used for OCR.")
 
 class HealthResponse(BaseModel):

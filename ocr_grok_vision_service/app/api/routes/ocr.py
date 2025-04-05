@@ -69,9 +69,18 @@ async def perform_ocr(
             prompt=prompt,
             api_key=x_api_key
         )
+        content_type = file.content_type
+        if content_type not in ALLOWED_CONTENT_TYPES:
+            guessed_type, _ = mimetypes.guess_type(file.filename or "")
+            if guessed_type in ALLOWED_CONTENT_TYPES:
+                content_type = guessed_type
+            else:
+                content_type = "image/unknown"
+
         return OCRResponse(
             filename=file.filename or "uploaded_image",
-            text=extracted_text,
+            content_type=content_type,
+            extracted_text=extracted_text,
             model_used=model_used
         )
     except HTTPException as http_exc:
@@ -83,3 +92,4 @@ async def perform_ocr(
         ) from e
     finally:
         await file.close()
+
