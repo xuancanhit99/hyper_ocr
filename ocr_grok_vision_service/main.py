@@ -1,6 +1,6 @@
 # app/main.py
 from fastapi import FastAPI
-from app.api.routes import ocr, health
+from app.api.routes import ocr, health, chat # Import the new chat router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -15,6 +15,7 @@ app = FastAPI(
 
 app.include_router(ocr.router, prefix="/ocr", tags=["OCR"])
 app.include_router(health.router, tags=["Health"])
+app.include_router(chat.router, prefix="/chat", tags=["Chat"]) # Include the chat router
 
 
 @app.get("/", tags=["Root"], summary="Root Endpoint")

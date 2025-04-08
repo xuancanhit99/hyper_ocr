@@ -13,7 +13,8 @@ class Settings(BaseSettings):
 
     XAI_API_KEY: str = os.getenv("XAI_API_KEY")
     XAI_API_BASE_URL: str = "https://api.x.ai/v1"
-    GROK_DEFAULT_MODEL: str =  os.getenv("GROK_DEFAULT_MODEL", "grok-2-vision-1212")
+    GROK_VISION_DEFAULT_MODEL: str =  os.getenv("GROK_VISION_DEFAULT_MODEL", "grok-2-vision-1212") # Renamed for clarity
+    GROK_TEXT_DEFAULT_MODEL: str = os.getenv("GROK_TEXT_DEFAULT_MODEL", "grok-2-1212") # Default text model
     
     ALLOWED_CONTENT_TYPES: list[str] = ["image/jpeg", "image/png"]
 
