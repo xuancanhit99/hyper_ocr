@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ocr_gemini_service:
+    build:
+      context: ./ocr_gemini_service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" # Map host port 8000 to container port 8000
+    env_file:
+      - ./ocr_gemini_service/.env
+    volumes:
+      # Mount the app directory for live reloading during development
+      - ./ocr_gemini_service/app:/app/app
+    container_name: ocr_gemini_service
+
+  ocr_grok_vision_service:
+    build:
+      context: ./ocr_grok_vision_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000" # Map host port 8001 to container port 8000
+    env_file:
+      - ./ocr_grok_vision_service/.env
+    volumes:
+      # Mount the app directory for live reloading during development
+      - ./ocr_grok_vision_service/app:/app/app
+    container_name: ocr_grok_vision_service
