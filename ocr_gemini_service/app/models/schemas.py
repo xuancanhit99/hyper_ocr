@@ -13,9 +13,9 @@ class ErrorResponse(BaseModel):
     detail: str
 # --- Chat Schemas ---
 class ChatMessage(BaseModel):
-    """Represents a single message in the chat history."""
-    role: str # Should be 'user' or 'model'
-    parts: list[str] # The text content of the message
+    """Represents a single message in the chat history. Standardized to use 'content'."""
+    role: str # Standardized role: 'user' or 'assistant'
+    content: str # Standardized field for text content
 
 class ChatRequest(BaseModel):
     """Request model for the chat endpoint."""

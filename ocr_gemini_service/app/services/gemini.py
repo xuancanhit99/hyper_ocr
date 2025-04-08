@@ -67,21 +67,55 @@ class GeminiService:
                 detail=f"Error processing image with Gemini: {e}"
             )
 
-    async def generate_text_response(self, message: str, history: list[ChatMessage]) -> str:
-        """Generates a text response using the configured Gemini text model, considering chat history."""
-        if not self.model:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Gemini text model not initialized"
-            )
+    async def generate_text_response(
+        self,
+        message: str,
+        history: list[ChatMessage],
+        model_name_override: str | None = None
+    ) -> tuple[str, str]: # Return response text and model used
+        """
+        Generates a text response using the specified or default Gemini text model,
+        considering chat history.
+        """
+        # Determine which model to use
+        target_model_name = model_name_override or self.model_name
+        model_to_use = self.model # Default to the initialized model
+
+        # If an override is specified and it's different from the default initialized model,
+        # try to initialize a temporary model instance for this request.
+        # Note: This creates a new model object per request if overridden.
+        # Consider caching or a different approach if performance becomes an issue.
+        if model_name_override and model_name_override != self.model_name:
+            try:
+                # Ensure API key is configured before trying to create a new model
+                if not self.api_key:
+                     raise ValueError("GOOGLE_API_KEY is not configured for model override.")
+                genai.configure(api_key=self.api_key) # Ensure configuration is set
+                model_to_use = genai.GenerativeModel(target_model_name)
+            except Exception as e:
+                 raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"Failed to initialize requested Gemini model '{target_model_name}': {e}"
+                )
+
+        if not model_to_use:
+             # This should ideally not happen if initialization worked or default model exists
+             raise HTTPException(
+                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                 detail=f"Gemini text model '{target_model_name}' could not be used."
+             )
 
         # Format history for the Gemini API
         # The API expects a list of dicts with 'role' and 'parts' (where parts is a list of strings)
-        formatted_history = [{"role": msg.role, "parts": msg.parts} for msg in history]
+        # Convert history: map 'assistant' role to 'model' for Google API
+        formatted_history = [
+            {"role": "model" if msg.role == "assistant" else msg.role, "parts": [msg.content]}
+            for msg in history
+        ]
 
         try:
             # Start a chat session with the provided history
-            chat = self.model.start_chat(history=formatted_history)
+            chat = model_to_use.start_chat(history=formatted_history) # Use the determined model
             # Send the new message - this seems synchronous in the current library version
             response = chat.send_message(message)
 
@@ -93,7 +127,8 @@ class GeminiService:
                      # Decide how to handle empty responses in chat - maybe return a specific message
                      return "Model did not provide a response."
 
-            return response.text
+            # Return both the text and the actual model name used
+            return response.text, target_model_name
         except generation_types.BlockedPromptException as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
