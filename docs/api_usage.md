@@ -1,8 +1,8 @@
-# API Documentation - OCR and Chat Services (Gemini & Grok)
+# 📄 API Documentation - OCR and Chat Services (Gemini & Grok)
 
 This document describes how to integrate and use the APIs provided by the OCR Gemini and OCR Grok Vision services.
 
-## General Information
+## ℹ️ General Information
 
 ### Base URLs (Default when running via Docker Compose)
 
@@ -11,7 +11,7 @@ This document describes how to integrate and use the APIs provided by the OCR Ge
 
 *(Note: These ports may change depending on your deployment configuration)*
 
-### Authentication
+### 🔑 Authentication
 
 Both services use API Key-based authentication via HTTP Header.
 
@@ -22,11 +22,11 @@ If the API key is configured in the service's `.env` file on the server-side, yo
 
 ---
 
-## 1. OCR Gemini Service
+## ♊ 1. OCR Gemini Service
 
 **Base URL:** `http://localhost:8000`
 
-### 1.1. Extract Text from Image (OCR)
+### 📸 1.1. Extract Text from Image (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
 *   **Description:** Upload an image file to extract text using the Gemini Vision model.
@@ -58,7 +58,7 @@ If the API key is configured in the service's `.env` file on the server-side, yo
          -F "file=@/path/to/your/image.png"
     ```
 
-### 1.2. Text Chat
+### 💬 1.2. Text Chat
 
 *   **Endpoint:** `POST /chat/`
 *   **Description:** Send a message and chat history to get a response from the Gemini Text model.
@@ -110,11 +110,11 @@ If the API key is configured in the service's `.env` file on the server-side, yo
 
 ---
 
-## 2. OCR Grok Vision Service
+## 🤖 2. OCR Grok Vision Service
 
 **Base URL:** `http://localhost:8001`
 
-### 2.1. Extract Text from Image (OCR)
+### 📸 2.1. Extract Text from Image (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
 *   **Description:** Upload an image file to extract text using the Grok Vision model.
@@ -146,7 +146,7 @@ If the API key is configured in the service's `.env` file on the server-side, yo
          -F "file=@/path/to/your/image.jpg"
     ```
 
-### 2.2. Text Chat
+### 💬 2.2. Text Chat
 
 *   **Endpoint:** `POST /chat/`
 *   **Description:** Send a message and chat history to get a response from the Grok Text model.
@@ -195,7 +195,7 @@ If the API key is configured in the service's `.env` file on the server-side, yo
 
 ---
 
-## 3. Health Check
+## ✅ 3. Health Check
 
 Both services provide an endpoint to check their operational status.
 

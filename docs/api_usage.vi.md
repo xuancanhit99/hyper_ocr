@@ -1,8 +1,8 @@
-# Tài liệu API - Dịch vụ OCR và Chat (Gemini & Grok)
+# 📄 Tài liệu API - Dịch vụ OCR và Chat (Gemini & Grok)
 
 Tài liệu này mô tả cách tích hợp và sử dụng các API được cung cấp bởi dịch vụ OCR Gemini và OCR Grok Vision.
 
-## Thông tin Chung
+## ℹ️ Thông tin Chung
 
 ### Base URLs (Mặc định khi chạy qua Docker Compose)
 
@@ -11,7 +11,7 @@ Tài liệu này mô tả cách tích hợp và sử dụng các API được cu
 
 *(Lưu ý: Các cổng này có thể thay đổi tùy thuộc vào cấu hình triển khai của bạn)*
 
-### Xác thực (Authentication)
+### 🔑 Xác thực (Authentication)
 
 Cả hai dịch vụ đều sử dụng xác thực dựa trên API Key thông qua HTTP Header.
 
@@ -22,11 +22,11 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
 
 ---
 
-## 1. OCR Gemini Service
+## ♊ 1. OCR Gemini Service
 
 **Base URL:** `http://localhost:8000`
 
-### 1.1. Trích xuất Văn bản từ Hình ảnh (OCR)
+### 📸 1.1. Trích xuất Văn bản từ Hình ảnh (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
 *   **Mô tả:** Tải lên một tệp hình ảnh để trích xuất văn bản bằng mô hình Gemini Vision.
@@ -58,7 +58,7 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
          -F "file=@/duong/dan/toi/file/anh.png"
     ```
 
-### 1.2. Trò chuyện Văn bản (Chat)
+### 💬 1.2. Trò chuyện Văn bản (Chat)
 
 *   **Endpoint:** `POST /chat/`
 *   **Mô tả:** Gửi tin nhắn và lịch sử trò chuyện để nhận phản hồi từ mô hình Gemini Text.
@@ -110,11 +110,11 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
 
 ---
 
-## 2. OCR Grok Vision Service
+## 🤖 2. OCR Grok Vision Service
 
 **Base URL:** `http://localhost:8001`
 
-### 2.1. Trích xuất Văn bản từ Hình ảnh (OCR)
+### 📸 2.1. Trích xuất Văn bản từ Hình ảnh (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
 *   **Mô tả:** Tải lên một tệp hình ảnh để trích xuất văn bản bằng mô hình Grok Vision.
@@ -146,7 +146,7 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
          -F "file=@/duong/dan/toi/file/anh.jpg"
     ```
 
-### 2.2. Trò chuyện Văn bản (Chat)
+### 💬 2.2. Trò chuyện Văn bản (Chat)
 
 *   **Endpoint:** `POST /chat/`
 *   **Mô tả:** Gửi tin nhắn và lịch sử trò chuyện để nhận phản hồi từ mô hình Grok Text.
@@ -195,7 +195,7 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
 
 ---
 
-## 3. Health Check
+## ✅ 3. Health Check
 
 Cả hai dịch vụ đều cung cấp một endpoint để kiểm tra trạng thái hoạt động.
 
