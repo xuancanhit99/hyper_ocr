@@ -34,6 +34,7 @@ If the API key is configured in the service's `.env` file on the server-side, yo
     *   `X-API-Key`: (Optional) Google API Key.
 *   **Request Body:** `multipart/form-data`
     *   `file`: (Required) The image file to process (Allowed types: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`).
+*   **Query Parameters:**
     *   `prompt`: (Optional) Text string to guide the model (e.g., "Extract only the address"). Defaults to extracting all text.
     *   `model_name`: (Optional) Specific Gemini Vision model name to use (e.g., `gemini-2.0-flash-exp-image-generation`). Defaults to the value from configuration (`GEMINI_VISION_MODEL_NAME`).
 *   **Response (Success - 200 OK):** `application/json`
@@ -122,6 +123,7 @@ If the API key is configured in the service's `.env` file on the server-side, yo
     *   `X-API-Key`: (Optional) XAI API Key.
 *   **Request Body:** `multipart/form-data`
     *   `file`: (Required) The image file to process (Allowed types: `image/jpeg`, `image/png`).
+*   **Query Parameters:**
     *   `prompt`: (Optional) Text string to guide the model. Defaults to extracting all text.
     *   `model_name`: (Optional) Specific Grok Vision model name to use (e.g., `grok-2-vision-1212`). Defaults to the value from configuration (`GROK_VISION_DEFAULT_MODEL`).
 *   **Response (Success - 200 OK):** `application/json`

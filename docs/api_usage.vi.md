@@ -34,6 +34,7 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
     *   `X-API-Key`: (Tùy chọn) Google API Key.
 *   **Request Body:** `multipart/form-data`
     *   `file`: (Bắt buộc) Tệp hình ảnh cần xử lý (Các loại được phép: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`).
+*   **Query Parameters:**
     *   `prompt`: (Tùy chọn) Chuỗi văn bản để hướng dẫn mô hình (ví dụ: "Chỉ trích xuất địa chỉ"). Mặc định là trích xuất tất cả văn bản.
     *   `model_name`: (Tùy chọn) Tên model Gemini Vision cụ thể muốn sử dụng (ví dụ: `gemini-2.0-flash-exp-image-generation`). Mặc định được lấy từ cấu hình (`GEMINI_VISION_MODEL_NAME`).
 *   **Response (Success - 200 OK):** `application/json`
@@ -122,6 +123,7 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
     *   `X-API-Key`: (Tùy chọn) XAI API Key.
 *   **Request Body:** `multipart/form-data`
     *   `file`: (Bắt buộc) Tệp hình ảnh cần xử lý (Các loại được phép: `image/jpeg`, `image/png`).
+*   **Query Parameters:**
     *   `prompt`: (Tùy chọn) Chuỗi văn bản để hướng dẫn mô hình. Mặc định là trích xuất tất cả văn bản.
     *   `model_name`: (Tùy chọn) Tên model Grok Vision cụ thể muốn sử dụng (ví dụ: `grok-2-vision-1212`). Mặc định được lấy từ cấu hình (`GROK_VISION_DEFAULT_MODEL`).
 *   **Response (Success - 200 OK):** `application/json`
