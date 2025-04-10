@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  ocr_cloud_vision_service:
+    # Build configuration: uses Dockerfile in the current directory (.)
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Port mapping: maps host port 8002 to container port 8810
+    ports:
+      - "6363:6363"
+
+    # Environment variables: loads from .env file in the current directory
+    env_file:
+      - ./.env
+
+    # Volumes: mounts local directories/files into the container
+    volumes:
+      # Mount the application code for potential live-reloading (useful during development)
+      # Source path is relative to this compose.yaml file
+      - ./app:/app/app
+
+      # Mount the Google Cloud credentials key file
+      # IMPORTANT: Place your key file named 'google-vision-key.json' in this same directory (ocr_cloud_vision/)
+      # Ensure GOOGLE_APPLICATION_CREDENTIALS=/app/google-vision-key.json is set in the .env file
+      - ./google-vision-key.json:/app/google-vision-key.json:ro # Mount as read-only for security
+
+    # Container name (optional but recommended for easier identification)
+    container_name: ocr_cloud_vision_service
+
+# You can add network configurations here if needed, e.g.:
+# networks:
+#   default:
+#     name: ocr_network

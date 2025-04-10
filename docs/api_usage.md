@@ -1,6 +1,6 @@
-# 📄 API Documentation - OCR and Chat Services (Gemini & Grok)
+# 📄 API Documentation - OCR and Chat Services (Gemini, Grok, Cloud Vision)
 
-This document describes how to integrate and use the APIs provided by the OCR Gemini and OCR Grok Vision services.
+This document describes how to integrate and use the APIs provided by the OCR Gemini, OCR Grok Vision, and OCR Cloud Vision services.
 
 ## ℹ️ General Information
 
@@ -8,17 +8,14 @@ This document describes how to integrate and use the APIs provided by the OCR Ge
 
 *   **OCR Gemini Service:** `http://localhost:8000`
 *   **OCR Grok Vision Service:** `http://localhost:8001`
+*   **OCR Cloud Vision Service:** `http://localhost:8002`
 
 *(Note: These ports may change depending on your deployment configuration)*
 
 ### 🔑 Authentication
 
-Both services use API Key-based authentication via HTTP Header.
-
-*   **Header Name:** `X-API-Key`
-*   **Value:** The corresponding API key (Google API Key for Gemini, XAI API Key for Grok).
-
-If the API key is configured in the service's `.env` file on the server-side, you do not need to send this header. Use this header if you want to override or provide the API key per request.
+*   **Gemini & Grok Services:** These services can use API Key-based authentication via the `X-API-Key` HTTP Header (Google API Key for Gemini, XAI API Key for Grok). If the API key is configured in the service's `.env` file on the server-side, you do not need to send this header. Use this header only if you want to override or provide the API key per request.
+*   **Cloud Vision Service:** This service authenticates using Google Cloud Application Default Credentials (ADC). Typically, this involves setting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable within the service's environment (e.g., via the `.env` file and Docker Compose) to point to a service account key file. No specific HTTP header is usually required for authentication when using ADC.
 
 ---
 
@@ -197,11 +194,64 @@ If the API key is configured in the service's `.env` file on the server-side, yo
 
 ---
 
-## ✅ 3. Health Check
+## ☁️ 3. OCR Cloud Vision Service
 
-Both services provide an endpoint to check their operational status.
+**Base URL:** `http://localhost:8002`
 
-*   **Endpoint:** `GET /health/`
+### 📸 3.1. Extract Text from Image (OCR)
+
+*   **Endpoint:** `POST /ocr/extract-text`
+*   **Description:** Upload an image file to extract text using the Google Cloud Vision API.
+*   **Authentication:** Uses Google Cloud Application Default Credentials (ADC) configured on the server-side (via `GOOGLE_APPLICATION_CREDENTIALS` environment variable). No specific `X-API-Key` header is needed.
+*   **Request Body:** `multipart/form-data`
+    *   `file`: (Required) The image file to process (Supports various formats like JPEG, PNG, GIF, BMP, WEBP, RAW, ICO, PDF, TIFF - check Google Cloud Vision documentation for the full list and limits).
+*   **Query Parameters:** None.
+*   **Response (Success - 200 OK):** `application/json`
+    ```json
+    {
+      "text": "Full extracted text content...",
+      "details": [
+        {
+          "text": "Word1",
+          "bounding_box": [
+            {"x": 10, "y": 10},
+            {"x": 50, "y": 10},
+            {"x": 50, "y": 30},
+            {"x": 10, "y": 30}
+          ]
+        },
+        {
+          "text": "Word2",
+          "bounding_box": [
+            {"x": 60, "y": 10},
+            {"x": 100, "y": 10},
+            {"x": 100, "y": 30},
+            {"x": 60, "y": 30}
+          ]
+        }
+        // ... other detected text blocks
+      ]
+    }
+    ```
+*   **Response (Error):** `application/json` (Examples: 400, 403, 429, 500, 502)
+    ```json
+    {
+      "detail": "Detailed error description (e.g., 'Permission denied: Check credentials/API key permissions...', 'API quota exceeded...', 'Invalid image format or content...', 'Upstream Google API Error:...')"
+    }
+    ```
+*   **Example (curl):**
+    ```bash
+    curl -X POST "http://localhost:8002/ocr/extract-text" \
+         -F "file=@/path/to/your/image.png"
+    ```
+
+---
+
+## ✅ 4. Health Check
+
+All services provide an endpoint to check their operational status.
+
+*   **Endpoint:** `GET /health` (Note: No trailing slash for Cloud Vision)
 *   **Description:** Returns the current status of the service.
 *   **Response (Success - 200 OK):** `application/json`
     *   *Gemini:*
@@ -218,7 +268,14 @@ Both services provide an endpoint to check their operational status.
           "app_version": "1.0.0"
         }
         ```
+    *   *Cloud Vision:*
+        ```json
+        {
+          "status": "ok"
+        }
+        ```
 *   **Example (curl):**
     ```bash
     curl -X GET http://localhost:8000/health/
     curl -X GET http://localhost:8001/health/
+    curl -X GET http://localhost:8002/health

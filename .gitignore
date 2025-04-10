@@ -8,3 +8,5 @@ ocr_gemini_service/.env
 ocr_grok_vision_service/.env
 guidelines.md
 **/.venv/
+MICROSERVICE_TEMPLATE.md
+ocr_cloud_vision/google-vision-key.json

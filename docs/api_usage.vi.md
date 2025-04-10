@@ -1,6 +1,6 @@
-# 📄 Tài liệu API - Dịch vụ OCR và Chat (Gemini & Grok)
+# 📄 Tài liệu API - Dịch vụ OCR và Chat (Gemini, Grok, Cloud Vision)
 
-Tài liệu này mô tả cách tích hợp và sử dụng các API được cung cấp bởi dịch vụ OCR Gemini và OCR Grok Vision.
+Tài liệu này mô tả cách tích hợp và sử dụng các API được cung cấp bởi dịch vụ OCR Gemini, OCR Grok Vision và OCR Cloud Vision.
 
 ## ℹ️ Thông tin Chung
 
@@ -8,17 +8,14 @@ Tài liệu này mô tả cách tích hợp và sử dụng các API được cu
 
 *   **OCR Gemini Service:** `http://localhost:8000`
 *   **OCR Grok Vision Service:** `http://localhost:8001`
+*   **OCR Cloud Vision Service:** `http://localhost:8002`
 
 *(Lưu ý: Các cổng này có thể thay đổi tùy thuộc vào cấu hình triển khai của bạn)*
 
 ### 🔑 Xác thực (Authentication)
 
-Cả hai dịch vụ đều sử dụng xác thực dựa trên API Key thông qua HTTP Header.
-
-*   **Header Name:** `X-API-Key`
-*   **Value:** Khóa API tương ứng (Google API Key cho Gemini, XAI API Key cho Grok).
-
-Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ phía máy chủ, bạn không cần gửi header này. Nếu bạn muốn ghi đè hoặc cung cấp khóa API cho mỗi yêu cầu, hãy sử dụng header này.
+*   **Dịch vụ Gemini & Grok:** Các dịch vụ này có thể sử dụng xác thực dựa trên API Key thông qua HTTP Header `X-API-Key` (Google API Key cho Gemini, XAI API Key cho Grok). Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ phía máy chủ, bạn không cần gửi header này. Chỉ sử dụng header này nếu bạn muốn ghi đè hoặc cung cấp khóa API cho mỗi yêu cầu.
+*   **Dịch vụ Cloud Vision:** Dịch vụ này xác thực bằng Google Cloud Application Default Credentials (ADC). Thông thường, điều này bao gồm việc đặt biến môi trường `GOOGLE_APPLICATION_CREDENTIALS` trong môi trường của dịch vụ (ví dụ: qua tệp `.env` và Docker Compose) để trỏ đến tệp khóa tài khoản dịch vụ (service account key file). Thường không cần header HTTP cụ thể nào để xác thực khi sử dụng ADC.
 
 ---
 
@@ -197,11 +194,64 @@ Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ p
 
 ---
 
-## ✅ 3. Health Check
+## ☁️ 3. OCR Cloud Vision Service
 
-Cả hai dịch vụ đều cung cấp một endpoint để kiểm tra trạng thái hoạt động.
+**Base URL:** `http://localhost:8002`
 
-*   **Endpoint:** `GET /health/`
+### 📸 3.1. Trích xuất Văn bản từ Hình ảnh (OCR)
+
+*   **Endpoint:** `POST /ocr/extract-text`
+*   **Mô tả:** Tải lên một tệp hình ảnh để trích xuất văn bản bằng Google Cloud Vision API.
+*   **Xác thực:** Sử dụng Google Cloud Application Default Credentials (ADC) được cấu hình phía máy chủ (thông qua biến môi trường `GOOGLE_APPLICATION_CREDENTIALS`). Không cần header `X-API-Key` cụ thể.
+*   **Request Body:** `multipart/form-data`
+    *   `file`: (Bắt buộc) Tệp hình ảnh cần xử lý (Hỗ trợ nhiều định dạng như JPEG, PNG, GIF, BMP, WEBP, RAW, ICO, PDF, TIFF - kiểm tra tài liệu Google Cloud Vision để biết danh sách đầy đủ và giới hạn).
+*   **Query Parameters:** Không có.
+*   **Response (Success - 200 OK):** `application/json`
+    ```json
+    {
+      "text": "Nội dung văn bản đầy đủ được trích xuất...",
+      "details": [
+        {
+          "text": "Từ 1",
+          "bounding_box": [
+            {"x": 10, "y": 10},
+            {"x": 50, "y": 10},
+            {"x": 50, "y": 30},
+            {"x": 10, "y": 30}
+          ]
+        },
+        {
+          "text": "Từ 2",
+          "bounding_box": [
+            {"x": 60, "y": 10},
+            {"x": 100, "y": 10},
+            {"x": 100, "y": 30},
+            {"x": 60, "y": 30}
+          ]
+        }
+        // ... các khối văn bản khác được phát hiện
+      ]
+    }
+    ```
+*   **Response (Error):** `application/json` (Ví dụ: 400, 403, 429, 500, 502)
+    ```json
+    {
+      "detail": "Mô tả lỗi chi tiết (ví dụ: 'Permission denied: Check credentials/API key permissions...', 'API quota exceeded...', 'Invalid image format or content...', 'Upstream Google API Error:...')"
+    }
+    ```
+*   **Ví dụ (curl):**
+    ```bash
+    curl -X POST "http://localhost:8002/ocr/extract-text" \
+         -F "file=@/duong/dan/toi/file/anh.png"
+    ```
+
+---
+
+## ✅ 4. Health Check
+
+Tất cả các dịch vụ đều cung cấp một endpoint để kiểm tra trạng thái hoạt động.
+
+*   **Endpoint:** `GET /health` (Lưu ý: Không có dấu gạch chéo cuối cho Cloud Vision)
 *   **Mô tả:** Trả về trạng thái hiện tại của dịch vụ.
 *   **Response (Success - 200 OK):** `application/json`
     *   *Gemini:*
@@ -218,7 +268,14 @@ Cả hai dịch vụ đều cung cấp một endpoint để kiểm tra trạng t
           "app_version": "1.0.0"
         }
         ```
+    *   *Cloud Vision:*
+        ```json
+        {
+          "status": "ok"
+        }
+        ```
 *   **Ví dụ (curl):**
     ```bash
     curl -X GET http://localhost:8000/health/
     curl -X GET http://localhost:8001/health/
+    curl -X GET http://localhost:8002/health
