@@ -7,7 +7,7 @@ from PIL import Image
 from fastapi import UploadFile
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from config import settings
+from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)

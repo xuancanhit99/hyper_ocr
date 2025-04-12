@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  receipt-ocr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: russian-receipt-ocr
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./uploads:/app/uploads
+    environment:
+      - PORT=8000
+      - DEBUG=true
+      - PYTESSERACT_PATH=/usr/bin/tesseract
+      - SECRET_KEY=your_secret_key_here
+      - API_KEY=your_api_key_here
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - receipt-ocr-network
+
+networks:
+  receipt-ocr-network:
+    driver: bridge

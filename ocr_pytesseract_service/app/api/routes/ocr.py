@@ -1,7 +1,7 @@
 # routers/ocr.py
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from services.ocr_services import extract_text_from_image, parse_receipt_data
+from app.services.ocr_services import extract_text_from_image, parse_receipt_data
 from typing import Optional
 import logging
 

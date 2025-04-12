@@ -2,8 +2,8 @@ from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from routers import ocr
-from config import settings
+from app.api.routes import ocr
+from app.core.config import settings
 
 app = FastAPI(
     title="Russian Receipt OCR Service",
