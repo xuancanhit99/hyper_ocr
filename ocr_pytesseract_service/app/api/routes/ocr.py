@@ -6,23 +6,23 @@ from typing import Optional
 import logging
 
 router = APIRouter(
-    prefix="/api/ocr",
+    prefix="/ocr",
     tags=["OCR"],
     responses={404: {"description": "Not found"}},
 )
 
 logger = logging.getLogger(__name__)
 
-@router.post("/receipt")
+@router.post("/extract-text")
 async def process_receipt(
-    image: UploadFile = File(...),
+    file: UploadFile = File(...),
 ):
     """
     Process a receipt image and extract the relevant information
     """
     try:
         # Extract text from image using OCR
-        extracted_text = await extract_text_from_image(image)
+        extracted_text = await extract_text_from_image(file)
         
         # Parse the extracted text to get receipt data
         receipt_data = parse_receipt_data(extracted_text)
