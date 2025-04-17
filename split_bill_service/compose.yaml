@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  bill_split:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bill_splitter_service
+    ports:
+      - "6565:6565"
+    volumes:
+      - ./app:/app/app
+      - ./uploads:/app/uploads 
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6565/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bill_split_network
+
+networks:
+  bill_split_network:
+    driver: bridge
