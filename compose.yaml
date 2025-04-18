@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Auth Service và các dependencies
+  # Auth Service and dependencies
   auth-service:
     build:
       context: ./auth_service
@@ -11,13 +11,13 @@ services:
     ports:
       - "8800:8800"
     env_file:
-      - .env
+      - ./auth_service/.env.example # Assuming .env.example holds defaults, adjust if .env is required
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy # Depend on redis being healthy
     networks:
-      - api-gateway-network    # Thêm network mới
-    healthcheck:              # Thêm healthcheck cho auth service
+      - api-gateway-network
+    healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8800/health"]
       interval: 30s
       timeout: 10s
@@ -32,58 +32,9 @@ services:
           memory: 256M
           cpus: '0.25'
 
-  ocr_gemini_service:
-    build:
-      context: ./ocr_gemini_service
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000" # Map host port 8000 to container port 8000
-    env_file:
-      - ./ocr_gemini_service/.env
-    volumes:
-      # Mount the app directory for live reloading during development
-      - ./ocr_gemini_service/app:/app/app
-    container_name: ocr_gemini_service
-    networks: # Add network
-      - hyper_ocr_network
-
-  ocr_grok_vision_service:
-    build:
-      context: ./ocr_grok_vision_service
-      dockerfile: Dockerfile
-    ports:
-      - "8001:8000" # Map host port 8001 to container port 8000
-    env_file:
-      - ./ocr_grok_vision_service/.env
-    volumes:
-      # Mount the app directory for live reloading during development
-      - ./ocr_grok_vision_service/app:/app/app
-    container_name: ocr_grok_vision_service
-    networks: # Add network
-      - hyper_ocr_network
-
-  gigachat_service:
-    build:
-      context: ./gigachat_service
-      dockerfile: Dockerfile
-    ports:
-      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
-      - "${GIGACHAT_SERVICE_PORT:-8005}:${APP_PORT:-8005}"
-    env_file:
-      - ./gigachat_service/.env
-    volumes:
-      # Mount for live reloading during development
-      - ./gigachat_service:/app
-    container_name: gigachat_service
-    networks: # Add network
-      - hyper_ocr_network
-
-networks: # Define the common network
-  hyper_ocr_network:
-    driver: bridge
-
   redis:
     image: redis:6
+    container_name: redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -105,8 +56,109 @@ networks: # Define the common network
       nofile:
         soft: 65536
         hard: 65536
+    networks: # Assign to the network used by auth-service
+      - api-gateway-network
 
-  # Kong Gateway và các dependencies
+  # OCR Services
+  ocr_gemini_service:
+    build:
+      context: ./ocr_gemini_service
+      dockerfile: Dockerfile
+    container_name: ocr_gemini_service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ocr_gemini_service/.env.example # Assuming .env.example
+    volumes:
+      - ./ocr_gemini_service/app:/app/app
+    networks:
+      - hyper_ocr_network
+    # Add healthcheck if available in the service
+
+  ocr_grok_vision_service:
+    build:
+      context: ./ocr_grok_vision_service
+      dockerfile: Dockerfile
+    container_name: ocr_grok_vision_service
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    env_file:
+      - ./ocr_grok_vision_service/.env.example # Assuming .env.example
+    volumes:
+      - ./ocr_grok_vision_service/app:/app/app
+    networks:
+      - hyper_ocr_network
+    # Add healthcheck if available in the service
+
+  ocr_cloud_vision_service: # Added Service
+    build:
+      context: ./ocr_cloud_vision_service
+      dockerfile: Dockerfile
+    container_name: ocr_cloud_vision_service
+    restart: unless-stopped
+    ports:
+      - "8002:8000" # Assign new port
+    env_file:
+      - ./ocr_cloud_vision_service/.env.example # Assuming .env.example
+    volumes:
+      - ./ocr_cloud_vision_service/app:/app/app # Assuming similar structure
+    networks:
+      - hyper_ocr_network
+    # Add healthcheck if available in the service
+
+  ocr_pytesseract_service: # Added Service
+    build:
+      context: ./ocr_pytesseract_service
+      dockerfile: Dockerfile
+    container_name: ocr_pytesseract_service
+    restart: unless-stopped
+    ports:
+      - "8003:8000" # Assign new port
+    env_file:
+      - ./ocr_pytesseract_service/.env.example # Assuming .env.example
+    volumes:
+      - ./ocr_pytesseract_service/app:/app/app # Assuming similar structure
+    networks:
+      - hyper_ocr_network
+    # Add healthcheck if available in the service
+
+  # Other AI/Utility Services
+  gigachat_service:
+    build:
+      context: ./gigachat_service
+      dockerfile: Dockerfile
+    container_name: gigachat_service
+    restart: unless-stopped
+    ports:
+      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
+      - "${GIGACHAT_SERVICE_PORT:-8005}:${APP_PORT:-8005}"
+    env_file:
+      - ./gigachat_service/.env.example # Assuming .env.example
+    volumes:
+      - ./gigachat_service:/app # Mounts the whole directory
+    networks:
+      - hyper_ocr_network
+    # Add healthcheck if available in the service
+
+  split_bill_service: # Added Service
+    build:
+      context: ./split_bill_service
+      dockerfile: Dockerfile
+    container_name: split_bill_service
+    restart: unless-stopped
+    ports:
+      - "8004:8000" # Assign new port
+    env_file:
+      - ./split_bill_service/.env.example # Assuming .env.example
+    volumes:
+      - ./split_bill_service/app:/app/app # Assuming similar structure
+    networks:
+      - hyper_ocr_network
+    # Add healthcheck if available in the service
+
+  # Kong API Gateway and dependencies
   kong-database:
     image: postgres:13
     container_name: kong-database
@@ -114,11 +166,11 @@ networks: # Define the common network
     environment:
       POSTGRES_USER: kong
       POSTGRES_DB: kong
-      POSTGRES_PASSWORD: kong
+      POSTGRES_PASSWORD: kong # Consider using secrets for production
     volumes:
       - kong-data:/var/lib/postgresql/data
     ports:
-      - "5435:5432"
+      - "5435:5432" # Expose only if needed externally
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kong"]
       interval: 10s
@@ -137,22 +189,24 @@ networks: # Define the common network
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
-      KONG_PG_PASSWORD: kong
+      KONG_PG_PASSWORD: kong # Consider using secrets
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      # KONG_PLUGINS: bundled, example-plugin # Add custom plugins if needed
     ports:
-      - "7000:8000"    # Proxy listener
-      - "7443:8443"    # Proxy SSL listener
-      - "7001:8001"    # Admin API
-      - "7444:8444"    # Admin API SSL
+      - "7000:8000"    # Proxy listener HTTP
+      - "7443:8443"    # Proxy listener HTTPS
+      - "7001:8001"    # Admin API HTTP
+      - "7444:8444"    # Admin API HTTPS
     command: |
       sh -c "kong migrations bootstrap && kong start"
     networks:
       - kong-net
-      - api-gateway-network    # Thêm network mới
+      - api-gateway-network # Network for auth service
+      - hyper_ocr_network   # Network for OCR/AI services
     deploy:
       resources:
         limits:
@@ -161,6 +215,7 @@ networks: # Define the common network
         reservations:
           memory: 512M
           cpus: '0.5'
+    # Add healthcheck
 
   konga:
     image: pantsel/konga:latest
@@ -169,32 +224,43 @@ networks: # Define the common network
     depends_on:
       - kong
     environment:
-      - NODE_ENV=production
-      - TOKEN_SECRET=supersecret
-      - KONGA_BACKEND_URL=http://kong:8001
+      NODE_ENV: production
+      TOKEN_SECRET: supersecret # CHANGE THIS IN PRODUCTION
+      KONGA_BACKEND_URL: http://kong:8001 # Internal communication via kong service name
     ports:
       - "7337:1337"
     networks:
       - kong-net
+    # Add healthcheck
 
+  # Monitoring Stack
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     restart: unless-stopped
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus # Persist Prometheus data
     ports:
       - "9090:9090"
     networks:
       - monitoring-net
-      - kong-net
+      - kong-net # To scrape Kong metrics if configured
+      - api-gateway-network # To scrape other services if needed
+      - hyper_ocr_network   # To scrape other services if needed
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    # Add healthcheck
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana-oss # Use OSS version unless enterprise features are needed
     container_name: grafana
     restart: unless-stopped
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin # CHANGE THIS IN PRODUCTION
     ports:
       - "3000:3000"
     networks:
@@ -203,6 +269,7 @@ networks: # Define the common network
       - prometheus
     volumes:
       - grafana_data:/var/lib/grafana
+    # Add healthcheck
 
   uptime-kuma:
     image: louislam/uptime-kuma:latest
@@ -211,11 +278,29 @@ networks: # Define the common network
     volumes:
       - uptime-kuma-data:/app/data
     ports:
-      - "3001:3001"  # Port mặc định của Uptime Kuma
+      - "3001:3001"
     networks:
       - monitoring-net
-#    healthcheck:
-#      test: ["CMD", "wget", "--spider", "http://localhost:3001"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
+    # Healthcheck is commented out, enable if desired
+    # healthcheck:
+    #   test: ["CMD", "wget", "--spider", "http://localhost:3001"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+networks:
+  api-gateway-network:
+    driver: bridge
+  hyper_ocr_network:
+    driver: bridge
+  kong-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  kong-data:
+  grafana_data:
+  uptime-kuma-data:
+  prometheus_data: # Added volume for Prometheus persistence

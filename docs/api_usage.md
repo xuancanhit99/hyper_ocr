@@ -1,354 +1,336 @@
-# 📄 API Documentation - OCR and Chat Services (Gemini, Grok, GigaChat, Cloud Vision)
+# 📄 API Documentation - Hyper OCR Microservices Suite
 
-This document describes how to integrate and use the APIs provided by the OCR Gemini, OCR Grok Vision, GigaChat, and OCR Cloud Vision services.
+This document describes how to integrate and use the APIs provided by the various microservices within the Hyper OCR suite, including OCR, Chat, Authentication, and Utility services.
 
 ## ℹ️ General Information
 
-### Base URLs (Default when running via Docker Compose)
+### 🌐 Accessing Services
 
+While services expose individual ports during local development, the **recommended and standard way to interact with the APIs is through the Kong API Gateway**.
+
+*   **API Gateway Base URL:** `http://localhost:7000`
+
+Kong handles routing requests to the appropriate backend service based on the path or other rules you configure. You will need to configure Kong (via Konga UI at `http://localhost:7337` or the Admin API at `http://localhost:7001`) to expose the desired service endpoints through the gateway.
+
+### Direct Service Base URLs (Default - For Development/Debugging Only)
+
+*   **Auth Service:** `http://localhost:8800`
 *   **OCR Gemini Service:** `http://localhost:8000`
 *   **OCR Grok Vision Service:** `http://localhost:8001`
-*   **GigaChat Service:** `http://localhost:8005` (Default, check `gigachat_service/.env`)
 *   **OCR Cloud Vision Service:** `http://localhost:8002`
+*   **OCR Pytesseract Service:** `http://localhost:8003`
+*   **Split Bill Service:** `http://localhost:8004`
+*   **GigaChat Service:** `http://localhost:8005` (Default, check `gigachat_service/.env`)
 
-*(Note: These ports may change depending on your deployment configuration)*
+*(Note: Direct access might be disabled or ports may change depending on deployment configuration. Always prefer the API Gateway.)*
 
 ### 🔑 Authentication
 
-*   **Gemini & Grok Services:** These services can use API Key-based authentication via the `X-API-Key` HTTP Header (Google API Key for Gemini, XAI API Key for Grok). If the API key is configured in the service's `.env` file on the server-side, you do not need to send this header. Use this header only if you want to override or provide the API key per request.
-*   **GigaChat Service:** This service handles authentication internally using OAuth 2.0 with the `GIGACHAT_AUTH_KEY` and `GIGACHAT_SCOPE` configured in its `.env` file. It automatically fetches and refreshes access tokens. No specific authentication headers are required when calling this service's endpoints.
-*   **Cloud Vision Service:** This service authenticates using Google Cloud Application Default Credentials (ADC). Typically, this involves setting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable within the service's environment (e.g., via the `.env` file and Docker Compose) to point to a service account key file. No specific HTTP header is usually required for authentication when using ADC.
+Authentication methods vary per service and how they are exposed via Kong:
+
+*   **Auth Service:** Likely uses JWT Bearer tokens. Obtain a token via a login endpoint (e.g., `/auth/token`) and send it in the `Authorization: Bearer <token>` header for protected endpoints.
+*   **Gemini & Grok Services:** Can use API Key-based authentication via the `X-API-Key` HTTP Header (Google API Key for Gemini, XAI API Key for Grok) *if not configured server-side*. If the key is in the service's `.env`, no header is needed for direct access. Kong can be configured to manage or inject these keys.
+*   **GigaChat Service:** Handles authentication internally using OAuth 2.0 configured via its `.env` file. No specific authentication headers are typically required when calling its endpoints directly or via Kong (unless Kong adds its own layer).
+*   **Cloud Vision Service:** Authenticates using Google Cloud Application Default Credentials (ADC) configured server-side (e.g., `GOOGLE_APPLICATION_CREDENTIALS` environment variable). No specific HTTP header is usually required.
+*   **Pytesseract Service:** Likely requires no specific authentication.
+*   **Split Bill Service:** Likely requires no specific authentication, but might be protected via the Auth service through Kong.
+*   **Kong Gateway:** Kong itself can add authentication layers (e.g., API Keys, JWT, OAuth2) to any route, regardless of the backend service's own authentication. Check Kong's configuration.
 
 ---
 
-## ♊ 1. OCR Gemini Service
+## 🔐 1. Auth Service
 
-**Base URL:** `http://localhost:8000`
+**Base URL (Direct):** `http://localhost:8800`
+**(Access via Kong: `http://localhost:7000/auth` - *Example path, configure in Kong*)**
 
-### 📸 1.1. Extract Text from Image (OCR)
+*(Note: Endpoints below are examples and need verification based on actual implementation)*
 
-*   **Endpoint:** `POST /ocr/extract-text`
-*   **Description:** Upload an image file to extract text using the Gemini Vision model.
-*   **Headers:**
-    *   `X-API-Key`: (Optional) Google API Key.
-*   **Request Body:** `multipart/form-data`
-    *   `file`: (Required) The image file to process (Allowed types: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`).
-*   **Query Parameters:**
-    *   `prompt`: (Optional) Text string to guide the model (e.g., "Extract only the address"). Defaults to extracting all text.
-    *   `model_name`: (Optional) Specific Gemini Vision model name to use (e.g., `gemini-2.0-flash-exp-image-generation`). Defaults to the value from configuration (`GEMINI_VISION_MODEL_NAME`).
+### 🔑 1.1. Obtain Access Token
+
+*   **Endpoint:** `POST /auth/token`
+*   **Description:** Authenticate user credentials to receive a JWT access token.
+*   **Request Body:** `application/x-www-form-urlencoded`
+    *   `username`: User's email or username.
+    *   `password`: User's password.
 *   **Response (Success - 200 OK):** `application/json`
     ```json
     {
-      "filename": "image_filename.jpg",
-      "content_type": "image/jpeg",
-      "extracted_text": "Extracted text content...",
-      "model_used": "gemini-2.0-flash-exp-image-generation" // Example model used
+      "access_token": "your_jwt_token_here",
+      "token_type": "bearer"
     }
     ```
-*   **Response (Error):** `application/json` (Examples: 400, 422, 500, 503)
-    ```json
-    {
-      "detail": "Detailed error description..."
-    }
-    ```
-*   **Example (curl):**
-    ```bash
-    curl -X POST "http://localhost:8000/ocr/extract-text?prompt=Extract%20only%20the%20invoice%20number&model_name=gemini-2.0-flash-exp-image-generation" \
-         -H "X-API-Key: YOUR_GOOGLE_API_KEY" \
-         -F "file=@/path/to/your/image.png"
-    ```
+*   **Response (Error):** 401 Unauthorized, 422 Unprocessable Entity.
 
-### 💬 1.2. Text Chat
+### 👤 1.2. Get Current User
 
-*   **Endpoint:** `POST /chat/`
-*   **Description:** Send a message and chat history to get a response from the Gemini Text model.
+*   **Endpoint:** `GET /users/me`
+*   **Description:** Retrieve details for the currently authenticated user.
 *   **Headers:**
-    *   `Content-Type`: `application/json`
-    *   `X-API-Key`: (Optional) Google API Key.
-*   **Request Body:** `application/json`
-    ```json
-    {
-      "message": "User's new message",
-      "history": [
-        {"role": "user", "content": "Previous user message"},
-        {"role": "assistant", "content": "Previous model response"}
-        // ... other turns
-      ],
-      "model_name": "gemini-2.0-flash" // Optional: override default model (e.g., use flash for chat)
-    }
-    ```
-    *   `message`: (Required) The latest message from the user.
-    *   `history`: (Optional) List of previous messages. `role` must be `"user"` or `"assistant"`.
-    *   `model_name`: (Optional) Specific Gemini Text model name to use (e.g., `gemini-2.0-flash`). Defaults to the value from configuration (`GEMINI_TEXT_MODEL_NAME`).
-*   **Response (Success - 200 OK):** `application/json`
-    ```json
-    {
-      "response_text": "Response from the Gemini model...",
-      "model_used": "gemini-2.0-flash" // Example model used
-    }
-    ```
-*   **Response (Error):** `application/json` (Examples: 400, 500, 503)
-    ```json
-    {
-      "detail": "Detailed error description..."
-    }
-    ```
-*   **Example (curl):**
-    ```bash
-    curl -X POST "http://localhost:8000/chat/" \
-         -H "Content-Type: application/json" \
-         -H "X-API-Key: YOUR_GOOGLE_API_KEY" \
-         -d '{
-               "message": "What is the capital of France?",
-               "history": [
-                 {"role": "user", "content": "Hello"},
-                 {"role": "assistant", "content": "Hi there!"}
-               ],
-               "model_name": "gemini-2.0-flash"
-             }'
-    ```
+    *   `Authorization`: `Bearer <your_jwt_token_here>`
+*   **Response (Success - 200 OK):** `application/json` (User details schema)
+*   **Response (Error):** 401 Unauthorized.
+
+### ➕ 1.3. Register New User
+
+*   **Endpoint:** `POST /users/`
+*   **Description:** Create a new user account.
+*   **Request Body:** `application/json` (User creation schema, e.g., email, password)
+*   **Response (Success - 201 Created):** `application/json` (Created user details)
+*   **Response (Error):** 400 Bad Request, 422 Unprocessable Entity.
 
 ---
 
-## 🤖 2. OCR Grok Vision Service
+## ♊ 2. OCR Gemini Service
 
-**Base URL:** `http://localhost:8001`
+**Base URL (Direct):** `http://localhost:8000`
+**(Access via Kong: `http://localhost:7000/ocr/gemini` - *Example path, configure in Kong*)**
 
 ### 📸 2.1. Extract Text from Image (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
-*   **Description:** Upload an image file to extract text using the Grok Vision model.
+*   **Description:** Upload an image file to extract text using the Gemini Vision model.
 *   **Headers:**
-    *   `X-API-Key`: (Optional) XAI API Key.
+    *   `X-API-Key`: (Optional) Google API Key (if not set server-side).
 *   **Request Body:** `multipart/form-data`
-    *   `file`: (Required) The image file to process (Allowed types: `image/jpeg`, `image/png`).
+    *   `file`: (Required) The image file (JPEG, PNG, WEBP, HEIC, HEIF).
 *   **Query Parameters:**
-    *   `prompt`: (Optional) Text string to guide the model. Defaults to extracting all text.
-    *   `model_name`: (Optional) Specific Grok Vision model name to use (e.g., `grok-2-vision-1212`). Defaults to the value from configuration (`GROK_VISION_DEFAULT_MODEL`).
+    *   `prompt`: (Optional) Guide the model (e.g., "Extract only the address").
+    *   `model_name`: (Optional) Override default Gemini Vision model.
 *   **Response (Success - 200 OK):** `application/json`
     ```json
     {
-      "filename": "image_filename.jpg",
+      "filename": "image.jpg",
       "content_type": "image/jpeg",
-      "extracted_text": "Extracted text content...",
-      "model_used": "grok-2-vision-1212" // Example model used
+      "extracted_text": "Extracted text...",
+      "model_used": "gemini-pro-vision"
     }
     ```
-*   **Response (Error):** `application/json` (Examples: 400, 415, 429, 500, 502, 503, 504)
-    ```json
-    {
-      "detail": "Detailed error description..."
-    }
-    ```
-*   **Example (curl):**
+*   **Example (curl via Kong):**
     ```bash
-    curl -X POST "http://localhost:8001/ocr/extract-text?model_name=grok-2-vision-1212" \
-         -H "X-API-Key: YOUR_XAI_API_KEY" \
-         -F "file=@/path/to/your/image.jpg"
+    # Assuming Kong route /ocr/gemini maps to this service
+    curl -X POST "http://localhost:7000/ocr/gemini/ocr/extract-text?prompt=Address" \
+         -H "Authorization: Bearer <KONG_JWT_IF_NEEDED>" \
+         -H "X-API-Key: YOUR_GOOGLE_API_KEY" \ # If required by Kong or service
+         -F "file=@/path/to/image.png"
     ```
 
 ### 💬 2.2. Text Chat
 
 *   **Endpoint:** `POST /chat/`
-*   **Description:** Send a message and chat history to get a response from the Grok Text model.
+*   **Description:** Send a message and history for a Gemini Text model response.
+*   **Headers:**
+    *   `Content-Type`: `application/json`
+    *   `X-API-Key`: (Optional) Google API Key.
+*   **Request Body:** `application/json`
+    ```json
+    {
+      "message": "User's message",
+      "history": [ /* {"role": "user", "content": "..."}, {"role": "assistant", "content": "..."} */ ],
+      "model_name": "gemini-pro" // Optional override
+    }
+    ```
+*   **Response (Success - 200 OK):** `application/json`
+    ```json
+    {
+      "response_text": "Model response...",
+      "model_used": "gemini-pro"
+    }
+    ```
+
+---
+
+## 🤖 3. OCR Grok Vision Service
+
+**Base URL (Direct):** `http://localhost:8001`
+**(Access via Kong: `http://localhost:7000/ocr/grok` - *Example path, configure in Kong*)**
+
+### 📸 3.1. Extract Text from Image (OCR)
+
+*   **Endpoint:** `POST /ocr/extract-text`
+*   **Description:** Upload an image file to extract text using the Grok Vision model.
+*   **Headers:**
+    *   `X-API-Key`: (Optional) XAI API Key (if not set server-side).
+*   **Request Body:** `multipart/form-data`
+    *   `file`: (Required) The image file (JPEG, PNG).
+*   **Query Parameters:**
+    *   `prompt`: (Optional) Guide the model.
+    *   `model_name`: (Optional) Override default Grok Vision model.
+*   **Response (Success - 200 OK):** `application/json`
+    ```json
+    {
+      "filename": "image.jpg",
+      "content_type": "image/jpeg",
+      "extracted_text": "Extracted text...",
+      "model_used": "grok-1.5-vision-preview"
+    }
+    ```
+
+### 💬 3.2. Text Chat
+
+*   **Endpoint:** `POST /chat/`
+*   **Description:** Send a message and history for a Grok Text model response.
 *   **Headers:**
     *   `Content-Type`: `application/json`
     *   `X-API-Key`: (Optional) XAI API Key.
 *   **Request Body:** `application/json`
     ```json
     {
-      "message": "User's new message",
-      "history": [
-        {"role": "user", "content": "Previous user message"},
-        {"role": "assistant", "content": "Previous model response"}
-        // ... other turns
-      ],
-      "model_name": "grok-2-1212" // Optional: override default model (e.g., use grok-2 for chat)
+      "message": "User's message",
+      "history": [ /* ... */ ],
+      "model_name": "grok-1.5-flash" // Optional override
     }
     ```
-    *   `message`: (Required) The latest message from the user.
-    *   `history`: (Optional) List of previous messages. `role` must be `"user"` or `"assistant"`.
-    *   `model_name`: (Optional) Specific Grok Text model name to use (e.g., `grok-2-1212`). Defaults to the value from configuration (`GROK_TEXT_DEFAULT_MODEL`).
 *   **Response (Success - 200 OK):** `application/json`
     ```json
     {
-      "response_text": "Response from the Grok model...",
-      "model_used": "grok-2-1212" // Example model used
+      "response_text": "Model response...",
+      "model_used": "grok-1.5-flash"
     }
     ```
-*   **Response (Error):** `application/json` (Examples: 400, 429, 500, 502, 503, 504)
-    ```json
-    {
-      "detail": "Detailed error description..."
-    }
-    ```
-*   **Example (curl):**
-    ```bash
-    curl -X POST "http://localhost:8001/chat/" \
-         -H "Content-Type: application/json" \
-         -H "X-API-Key: YOUR_XAI_API_KEY" \
-         -d '{
-               "message": "Explain the concept of zero-shot learning.",
-               "history": [],
-               "model_name": "grok-2-1212"
-             }'
-   ```
-
----
-
-## 💬 3. GigaChat Service
-
-**Base URL:** `http://localhost:8005` (Default)
-
-### 💬 3.1. Text Chat
-
-*   **Endpoint:** `POST /chat`
-*   **Description:** Send a message and chat history to get a response from the GigaChat model. Authentication is handled internally by the service.
-*   **Headers:**
-   *   `Content-Type`: `application/json`
-*   **Request Body:** `application/json`
-   ```json
-   {
-     "messages": [
-       {"role": "user", "content": "Привет! Как дела?"},
-       {"role": "assistant", "content": "Привет! У меня все отлично, спасибо."},
-       {"role": "user", "content": "Расскажи анекдот."}
-     ],
-     "model": "GigaChat-Pro", // Optional: override default model (e.g., GigaChat, GigaChat-Max)
-     "temperature": 0.7, // Optional: override temperature
-     "max_tokens": 100 // Optional: override max tokens
-   }
-   ```
-   *   `messages`: (Required) List of previous messages. `role` must be `"user"`, `"assistant"`, or `"system"`.
-   *   `model`: (Optional) Specific GigaChat model name to use (e.g., `GigaChat`, `GigaChat-Pro`, `GigaChat-Max`). Defaults to the value from configuration (`GIGACHAT_DEFAULT_MODEL`).
-   *   `temperature`: (Optional) Sampling temperature (float between 0 and 2).
-   *   `max_tokens`: (Optional) Maximum number of tokens to generate.
-*   **Response (Success - 200 OK):** `application/json`
-   ```json
-   {
-     "response": {
-       "role": "assistant",
-       "content": "Response from the GigaChat model..."
-       // "function_call": null // If function calling is used
-     },
-     "model_used": "GigaChat-Pro", // Example model used
-     "usage": {
-       "prompt_tokens": 50,
-       "completion_tokens": 75,
-       "total_tokens": 125
-     }
-   }
-   ```
-*   **Response (Error):** `application/json` (Examples: 400, 422, 500, 503)
-   ```json
-   {
-     "detail": "Detailed error description..."
-   }
-   ```
-*   **Example (curl):**
-   ```bash
-   curl -X POST "http://localhost:8005/chat" \
-        -H "Content-Type: application/json" \
-        -d '{
-              "messages": [
-                {"role": "user", "content": "Напиши короткий рассказ о роботе, который научился мечтать."}
-              ],
-              "model": "GigaChat-Max"
-            }'
-   ```
 
 ---
 
 ## ☁️ 4. OCR Cloud Vision Service
 
-**Base URL:** `http://localhost:8002`
+**Base URL (Direct):** `http://localhost:8002`
+**(Access via Kong: `http://localhost:7000/ocr/cloud-vision` - *Example path, configure in Kong*)**
 
 ### 📸 4.1. Extract Text from Image (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
-*   **Description:** Upload an image file to extract text using the Google Cloud Vision API.
-*   **Authentication:** Uses Google Cloud Application Default Credentials (ADC) configured on the server-side (via `GOOGLE_APPLICATION_CREDENTIALS` environment variable). No specific `X-API-Key` header is needed.
+*   **Description:** Upload an image file for OCR using Google Cloud Vision API.
+*   **Authentication:** Uses server-side ADC. No specific headers needed usually.
 *   **Request Body:** `multipart/form-data`
-    *   `file`: (Required) The image file to process (Supports various formats like JPEG, PNG, GIF, BMP, WEBP, RAW, ICO, PDF, TIFF - check Google Cloud Vision documentation for the full list and limits).
-*   **Query Parameters:** None.
+    *   `file`: (Required) Image file (JPEG, PNG, GIF, BMP, WEBP, RAW, ICO, PDF, TIFF).
 *   **Response (Success - 200 OK):** `application/json`
     ```json
     {
-      "text": "Full extracted text content...",
+      "text": "Full extracted text...",
       "details": [
         {
           "text": "Word1",
-          "bounding_box": [
-            {"x": 10, "y": 10},
-            {"x": 50, "y": 10},
-            {"x": 50, "y": 30},
-            {"x": 10, "y": 30}
-          ]
-        },
-        {
-          "text": "Word2",
-          "bounding_box": [
-            {"x": 60, "y": 10},
-            {"x": 100, "y": 10},
-            {"x": 100, "y": 30},
-            {"x": 60, "y": 30}
-          ]
+          "bounding_box": [ /* {"x": ..., "y": ...} */ ]
         }
-        // ... other detected text blocks
+        // ... other detected blocks
       ]
     }
-    ```
-*   **Response (Error):** `application/json` (Examples: 400, 403, 429, 500, 502)
-    ```json
-    {
-      "detail": "Detailed error description (e.g., 'Permission denied: Check credentials/API key permissions...', 'API quota exceeded...', 'Invalid image format or content...', 'Upstream Google API Error:...')"
-    }
-    ```
-*   **Example (curl):**
-    ```bash
-    curl -X POST "http://localhost:8002/ocr/extract-text" \
-         -F "file=@/path/to/your/image.png"
     ```
 
 ---
 
-## ✅ 5. Health Check
+## 📄 5. OCR Pytesseract Service
 
-All services provide an endpoint to check their operational status.
+**Base URL (Direct):** `http://localhost:8003`
+**(Access via Kong: `http://localhost:7000/ocr/tesseract` - *Example path, configure in Kong*)**
 
-*   **Endpoint:** `GET /health` (Note: No trailing slash for Cloud Vision)
-*   **Description:** Returns the current status of the service.
+### 📸 5.1. Extract Text from Image (OCR)
+
+*   **Endpoint:** `POST /ocr/extract-text` *(Assumption - Verify actual endpoint)*
+*   **Description:** Upload an image file for OCR using the Tesseract engine.
+*   **Authentication:** Likely none required directly.
+*   **Request Body:** `multipart/form-data`
+    *   `file`: (Required) Image file (Common formats like PNG, JPEG, TIFF).
+*   **Query Parameters:**
+    *   `lang`: (Optional) Language code(s) for Tesseract (e.g., `eng`, `rus`, `eng+rus`). Defaults might be configured server-side.
+*   **Response (Success - 200 OK):** `application/json` *(Assumption - Verify actual response format)*
+    ```json
+    {
+      "extracted_text": "Text extracted by Tesseract...",
+      "language_used": "eng" // Example
+    }
+    ```
+*   **Response (Error):** 400, 422, 500.
+
+---
+
+## 💸 6. Split Bill Service
+
+**Base URL (Direct):** `http://localhost:8004`
+**(Access via Kong: `http://localhost:7000/split-bill` - *Example path, configure in Kong*)**
+
+### 🧾 6.1. Split Bill from Image or Text
+
+*   **Endpoint:** `POST /split-bill/` *(Assumption - Verify actual endpoint)*
+*   **Description:** Analyzes an image (likely a receipt) or provided text to identify items and potentially split costs.
+*   **Authentication:** May require authentication (e.g., JWT via Auth Service) depending on configuration via Kong.
+*   **Request Body:** `multipart/form-data` OR `application/json` *(Assumption - Verify)*
+    *   Option 1 (`multipart/form-data`):
+        *   `file`: (Required) Image file of the receipt.
+    *   Option 2 (`application/json`):
+        *   `ocr_text`: (Required) Text extracted from a receipt by another OCR service.
+        *   `num_people`: (Optional) Number of people to split amongst.
+*   **Response (Success - 200 OK):** `application/json` *(Assumption - Verify actual response format)*
+    ```json
+    {
+      "items": [
+        {"item": "Burger", "price": 10.50},
+        {"item": "Fries", "price": 3.00}
+        // ...
+      ],
+      "total_amount": 13.50,
+      "split_details": {
+         // Details on how the bill is split if applicable
+      }
+    }
+    ```
+*   **Response (Error):** 400, 422, 500.
+
+---
+
+## 💬 7. GigaChat Service
+
+**Base URL (Direct):** `http://localhost:8005` (Default)
+**(Access via Kong: `http://localhost:7000/chat/gigachat` - *Example path, configure in Kong*)**
+
+### 💬 7.1. Text Chat
+
+*   **Endpoint:** `POST /chat`
+*   **Description:** Send message history for a GigaChat model response. Auth handled internally.
+*   **Headers:**
+    *   `Content-Type`: `application/json`
+*   **Request Body:** `application/json`
+    ```json
+    {
+      "messages": [ /* {"role": "user", "content": "..."}, ... */ ],
+      "model": "GigaChat-Pro", // Optional override
+      "temperature": 0.7, // Optional
+      "max_tokens": 100 // Optional
+    }
+    ```
 *   **Response (Success - 200 OK):** `application/json`
-    *   *Gemini:*
-        ```json
-        {
-          "status": "ok"
-        }
-        ```
-    *   *Grok:*
-        ```json
-        {
-          "status": "ok",
-          "app_name": "OCR Grok Vision Service",
-          "app_version": "1.0.0"
-        }
-        ```
-    *   *GigaChat:*
-        ```json
-        {
-          "status": "ok",
-          "service": "GigaChat Service"
-        }
-        ```
-    *   *Cloud Vision:*
-        ```json
-        {
-          "status": "ok"
-        }
-        ```
-*   **Example (curl):**
+    ```json
+    {
+      "response": {
+        "role": "assistant",
+        "content": "GigaChat response..."
+      },
+      "model_used": "GigaChat-Pro",
+      "usage": { /* token counts */ }
+    }
+    ```
+
+---
+
+## ✅ 8. Health Check
+
+All services should provide a health check endpoint. Access via Kong or directly.
+
+*   **Endpoint:** `GET /health` (Usually)
+*   **Description:** Returns the operational status of the service.
+*   **Response (Success - 200 OK):** `application/json` (Format varies slightly per service)
+    ```json
+    // Example structure
+    {
+      "status": "ok"
+      // Potentially other fields like "service_name", "version"
+    }
+    ```
+*   **Example (curl via Direct URL):**
     ```bash
-    curl -X GET http://localhost:8000/health
-    curl -X GET http://localhost:8001/health
-    curl -X GET http://localhost:8005/health # GigaChat health check
-    curl -X GET http://localhost:8002/health
+    curl http://localhost:8800/health # Auth
+    curl http://localhost:8000/health # Gemini
+    curl http://localhost:8001/health # Grok
+    curl http://localhost:8002/health # Cloud Vision
+    curl http://localhost:8003/health # Pytesseract (Verify path)
+    curl http://localhost:8004/health # Split Bill (Verify path)
+    curl http://localhost:8005/health # GigaChat
