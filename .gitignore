@@ -11,3 +11,4 @@ guidelines.md
 MICROSERVICE_TEMPLATE.md
 ocr_cloud_vision_service/google-vision-key.json
 auth_service/alembic.ini # Ignore alembic config with potential secrets
+auth_service/notes.py
