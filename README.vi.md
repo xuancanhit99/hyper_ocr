@@ -1,8 +1,8 @@
-# ✨ API Services OCR & Chat (Gemini & Grok)
+# ✨ API Services OCR & Chat (Gemini, Grok & GigaChat)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Dự án này cung cấp hai API service riêng biệt cho chức năng Nhận dạng Ký tự Quang học (OCR) và trò chuyện văn bản, sử dụng các mô hình từ Google Gemini và XAI Grok.
+Dự án này cung cấp nhiều API service cho chức năng Nhận dạng Ký tự Quang học (OCR) và trò chuyện văn bản, sử dụng các mô hình từ Google Gemini, XAI Grok, và Sber GigaChat.
 
 ## ✅ Yêu cầu
 
@@ -28,7 +28,12 @@ Dự án này cung cấp hai API service riêng biệt cho chức năng Nhận d
         cp ocr_grok_vision_service/.env.example ocr_grok_vision_service/.env
         ```
         Sau đó, sửa tệp `ocr_grok_vision_service/.env` và thêm `XAI_API_KEY` của bạn.
-    *(Tùy chọn: Bạn cũng có thể tùy chỉnh tên model mặc định trong các tệp `.env`.)*
+    *   **GigaChat:**
+        ```bash
+        cp gigachat_service/.env.example gigachat_service/.env
+        ```
+        Sau đó, sửa tệp `gigachat_service/.env` và thêm `GIGACHAT_AUTH_KEY` của bạn. Bạn cũng có thể cần điều chỉnh `GIGACHAT_SCOPE` dựa trên loại tài khoản của bạn.
+    *(Tùy chọn: Bạn cũng có thể tùy chỉnh tên model mặc định và cổng trong các tệp `.env`.)*
 
 3.  **▶️ Chạy các dịch vụ:**
     ```bash
@@ -36,6 +41,7 @@ Dự án này cung cấp hai API service riêng biệt cho chức năng Nhận d
     ```
     *   Dịch vụ Gemini sẽ có tại `http://localhost:8000`
     *   Dịch vụ Grok sẽ có tại `http://localhost:8001`
+    *   Dịch vụ GigaChat sẽ có tại `http://localhost:8005` (hoặc cổng được chỉ định trong `gigachat_service/.env`)
 
 ## 📚 Tài liệu API
 
@@ -43,6 +49,7 @@ Dự án này cung cấp hai API service riêng biệt cho chức năng Nhận d
 *   Tài liệu tương tác Swagger UI:
     *   Gemini: `http://localhost:8000/docs`
     *   Grok: `http://localhost:8001/docs`
+    *   GigaChat: `http://localhost:8005/docs` (hoặc cổng đã cấu hình)
 
 ## 📜 Giấy phép
 

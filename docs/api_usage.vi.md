@@ -1,6 +1,6 @@
-# 📄 Tài liệu API - Dịch vụ OCR và Chat (Gemini, Grok, Cloud Vision)
+# 📄 Tài liệu API - Dịch vụ OCR và Chat (Gemini, Grok, GigaChat, Cloud Vision)
 
-Tài liệu này mô tả cách tích hợp và sử dụng các API được cung cấp bởi dịch vụ OCR Gemini, OCR Grok Vision và OCR Cloud Vision.
+Tài liệu này mô tả cách tích hợp và sử dụng các API được cung cấp bởi dịch vụ OCR Gemini, OCR Grok Vision, GigaChat và OCR Cloud Vision.
 
 ## ℹ️ Thông tin Chung
 
@@ -8,6 +8,7 @@ Tài liệu này mô tả cách tích hợp và sử dụng các API được cu
 
 *   **OCR Gemini Service:** `http://localhost:8000`
 *   **OCR Grok Vision Service:** `http://localhost:8001`
+*   **GigaChat Service:** `http://localhost:8005` (Mặc định, kiểm tra `gigachat_service/.env`)
 *   **OCR Cloud Vision Service:** `http://localhost:8002`
 
 *(Lưu ý: Các cổng này có thể thay đổi tùy thuộc vào cấu hình triển khai của bạn)*
@@ -15,6 +16,7 @@ Tài liệu này mô tả cách tích hợp và sử dụng các API được cu
 ### 🔑 Xác thực (Authentication)
 
 *   **Dịch vụ Gemini & Grok:** Các dịch vụ này có thể sử dụng xác thực dựa trên API Key thông qua HTTP Header `X-API-Key` (Google API Key cho Gemini, XAI API Key cho Grok). Nếu khóa API đã được cấu hình trong tệp `.env` của dịch vụ phía máy chủ, bạn không cần gửi header này. Chỉ sử dụng header này nếu bạn muốn ghi đè hoặc cung cấp khóa API cho mỗi yêu cầu.
+*   **Dịch vụ GigaChat:** Dịch vụ này xử lý xác thực nội bộ bằng OAuth 2.0 với `GIGACHAT_AUTH_KEY` và `GIGACHAT_SCOPE` được cấu hình trong tệp `.env` của nó. Nó tự động lấy và làm mới token truy cập. Không cần header xác thực cụ thể nào khi gọi các endpoint của dịch vụ này.
 *   **Dịch vụ Cloud Vision:** Dịch vụ này xác thực bằng Google Cloud Application Default Credentials (ADC). Thông thường, điều này bao gồm việc đặt biến môi trường `GOOGLE_APPLICATION_CREDENTIALS` trong môi trường của dịch vụ (ví dụ: qua tệp `.env` và Docker Compose) để trỏ đến tệp khóa tài khoản dịch vụ (service account key file). Thường không cần header HTTP cụ thể nào để xác thực khi sử dụng ADC.
 
 ---
@@ -190,11 +192,74 @@ Tài liệu này mô tả cách tích hợp và sử dụng các API được cu
                "history": [],
                "model_name": "grok-2-1212"
              }'
-    ```
+   ```
 
 ---
 
-## ☁️ 3. OCR Cloud Vision Service
+## 💬 3. GigaChat Service
+
+**Base URL:** `http://localhost:8005` (Mặc định)
+
+### 💬 3.1. Trò chuyện Văn bản (Chat)
+
+*   **Endpoint:** `POST /chat`
+*   **Mô tả:** Gửi tin nhắn và lịch sử trò chuyện để nhận phản hồi từ mô hình GigaChat. Xác thực được xử lý nội bộ bởi dịch vụ.
+*   **Headers:**
+   *   `Content-Type`: `application/json`
+*   **Request Body:** `application/json`
+   ```json
+   {
+     "messages": [
+       {"role": "user", "content": "Chào bạn! Bạn khỏe không?"},
+       {"role": "assistant", "content": "Chào bạn! Tôi khỏe, cảm ơn."},
+       {"role": "user", "content": "Kể một câu chuyện cười đi."}
+     ],
+     "model": "GigaChat-Pro", // Tùy chọn: ghi đè model mặc định (vd: GigaChat, GigaChat-Max)
+     "temperature": 0.7, // Tùy chọn: ghi đè nhiệt độ
+     "max_tokens": 100 // Tùy chọn: ghi đè số token tối đa
+   }
+   ```
+   *   `messages`: (Bắt buộc) Danh sách các tin nhắn trước đó. `role` phải là `"user"`, `"assistant"`, hoặc `"system"`.
+   *   `model`: (Tùy chọn) Tên model GigaChat cụ thể muốn sử dụng (ví dụ: `GigaChat`, `GigaChat-Pro`, `GigaChat-Max`). Mặc định được lấy từ cấu hình (`GIGACHAT_DEFAULT_MODEL`).
+   *   `temperature`: (Tùy chọn) Nhiệt độ lấy mẫu (số thực từ 0 đến 2).
+   *   `max_tokens`: (Tùy chọn) Số lượng token tối đa để tạo ra.
+*   **Response (Success - 200 OK):** `application/json`
+   ```json
+   {
+     "response": {
+       "role": "assistant",
+       "content": "Phản hồi từ mô hình GigaChat..."
+       // "function_call": null // Nếu sử dụng gọi hàm
+     },
+     "model_used": "GigaChat-Pro", // Ví dụ model đã dùng
+     "usage": {
+       "prompt_tokens": 50,
+       "completion_tokens": 75,
+       "total_tokens": 125
+     }
+   }
+   ```
+*   **Response (Error):** `application/json` (Ví dụ: 400, 422, 500, 503)
+   ```json
+   {
+     "detail": "Mô tả lỗi chi tiết..."
+   }
+   ```
+*   **Ví dụ (curl):**
+   ```bash
+   curl -X POST "http://localhost:8005/chat" \
+        -H "Content-Type: application/json" \
+        -d '{
+              "messages": [
+                {"role": "user", "content": "Viết một câu chuyện ngắn về một robot học cách mơ."}
+              ],
+              "model": "GigaChat-Max"
+            }'
+   ```
+
+---
+
+## ☁️ 4. OCR Cloud Vision Service
 
 **Base URL:** `http://localhost:8002`
 
@@ -247,7 +312,7 @@ Tài liệu này mô tả cách tích hợp và sử dụng các API được cu
 
 ---
 
-## ✅ 4. Health Check
+## ✅ 5. Health Check
 
 Tất cả các dịch vụ đều cung cấp một endpoint để kiểm tra trạng thái hoạt động.
 
@@ -268,6 +333,13 @@ Tất cả các dịch vụ đều cung cấp một endpoint để kiểm tra tr
           "app_version": "1.0.0"
         }
         ```
+    *   *GigaChat:*
+        ```json
+        {
+          "status": "ok",
+          "service": "GigaChat Service"
+        }
+        ```
     *   *Cloud Vision:*
         ```json
         {
@@ -276,6 +348,7 @@ Tất cả các dịch vụ đều cung cấp một endpoint để kiểm tra tr
         ```
 *   **Ví dụ (curl):**
     ```bash
-    curl -X GET http://localhost:8000/health/
-    curl -X GET http://localhost:8001/health/
+    curl -X GET http://localhost:8000/health
+    curl -X GET http://localhost:8001/health
+    curl -X GET http://localhost:8005/health # Kiểm tra GigaChat health
     curl -X GET http://localhost:8002/health

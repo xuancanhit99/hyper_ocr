@@ -1,6 +1,6 @@
-# 📄 API Documentation - OCR and Chat Services (Gemini, Grok, Cloud Vision)
+# 📄 API Documentation - OCR and Chat Services (Gemini, Grok, GigaChat, Cloud Vision)
 
-This document describes how to integrate and use the APIs provided by the OCR Gemini, OCR Grok Vision, and OCR Cloud Vision services.
+This document describes how to integrate and use the APIs provided by the OCR Gemini, OCR Grok Vision, GigaChat, and OCR Cloud Vision services.
 
 ## ℹ️ General Information
 
@@ -8,6 +8,7 @@ This document describes how to integrate and use the APIs provided by the OCR Ge
 
 *   **OCR Gemini Service:** `http://localhost:8000`
 *   **OCR Grok Vision Service:** `http://localhost:8001`
+*   **GigaChat Service:** `http://localhost:8005` (Default, check `gigachat_service/.env`)
 *   **OCR Cloud Vision Service:** `http://localhost:8002`
 
 *(Note: These ports may change depending on your deployment configuration)*
@@ -15,6 +16,7 @@ This document describes how to integrate and use the APIs provided by the OCR Ge
 ### 🔑 Authentication
 
 *   **Gemini & Grok Services:** These services can use API Key-based authentication via the `X-API-Key` HTTP Header (Google API Key for Gemini, XAI API Key for Grok). If the API key is configured in the service's `.env` file on the server-side, you do not need to send this header. Use this header only if you want to override or provide the API key per request.
+*   **GigaChat Service:** This service handles authentication internally using OAuth 2.0 with the `GIGACHAT_AUTH_KEY` and `GIGACHAT_SCOPE` configured in its `.env` file. It automatically fetches and refreshes access tokens. No specific authentication headers are required when calling this service's endpoints.
 *   **Cloud Vision Service:** This service authenticates using Google Cloud Application Default Credentials (ADC). Typically, this involves setting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable within the service's environment (e.g., via the `.env` file and Docker Compose) to point to a service account key file. No specific HTTP header is usually required for authentication when using ADC.
 
 ---
@@ -190,15 +192,78 @@ This document describes how to integrate and use the APIs provided by the OCR Ge
                "history": [],
                "model_name": "grok-2-1212"
              }'
-    ```
+   ```
 
 ---
 
-## ☁️ 3. OCR Cloud Vision Service
+## 💬 3. GigaChat Service
+
+**Base URL:** `http://localhost:8005` (Default)
+
+### 💬 3.1. Text Chat
+
+*   **Endpoint:** `POST /chat`
+*   **Description:** Send a message and chat history to get a response from the GigaChat model. Authentication is handled internally by the service.
+*   **Headers:**
+   *   `Content-Type`: `application/json`
+*   **Request Body:** `application/json`
+   ```json
+   {
+     "messages": [
+       {"role": "user", "content": "Привет! Как дела?"},
+       {"role": "assistant", "content": "Привет! У меня все отлично, спасибо."},
+       {"role": "user", "content": "Расскажи анекдот."}
+     ],
+     "model": "GigaChat-Pro", // Optional: override default model (e.g., GigaChat, GigaChat-Max)
+     "temperature": 0.7, // Optional: override temperature
+     "max_tokens": 100 // Optional: override max tokens
+   }
+   ```
+   *   `messages`: (Required) List of previous messages. `role` must be `"user"`, `"assistant"`, or `"system"`.
+   *   `model`: (Optional) Specific GigaChat model name to use (e.g., `GigaChat`, `GigaChat-Pro`, `GigaChat-Max`). Defaults to the value from configuration (`GIGACHAT_DEFAULT_MODEL`).
+   *   `temperature`: (Optional) Sampling temperature (float between 0 and 2).
+   *   `max_tokens`: (Optional) Maximum number of tokens to generate.
+*   **Response (Success - 200 OK):** `application/json`
+   ```json
+   {
+     "response": {
+       "role": "assistant",
+       "content": "Response from the GigaChat model..."
+       // "function_call": null // If function calling is used
+     },
+     "model_used": "GigaChat-Pro", // Example model used
+     "usage": {
+       "prompt_tokens": 50,
+       "completion_tokens": 75,
+       "total_tokens": 125
+     }
+   }
+   ```
+*   **Response (Error):** `application/json` (Examples: 400, 422, 500, 503)
+   ```json
+   {
+     "detail": "Detailed error description..."
+   }
+   ```
+*   **Example (curl):**
+   ```bash
+   curl -X POST "http://localhost:8005/chat" \
+        -H "Content-Type: application/json" \
+        -d '{
+              "messages": [
+                {"role": "user", "content": "Напиши короткий рассказ о роботе, который научился мечтать."}
+              ],
+              "model": "GigaChat-Max"
+            }'
+   ```
+
+---
+
+## ☁️ 4. OCR Cloud Vision Service
 
 **Base URL:** `http://localhost:8002`
 
-### 📸 3.1. Extract Text from Image (OCR)
+### 📸 4.1. Extract Text from Image (OCR)
 
 *   **Endpoint:** `POST /ocr/extract-text`
 *   **Description:** Upload an image file to extract text using the Google Cloud Vision API.
@@ -247,7 +312,7 @@ This document describes how to integrate and use the APIs provided by the OCR Ge
 
 ---
 
-## ✅ 4. Health Check
+## ✅ 5. Health Check
 
 All services provide an endpoint to check their operational status.
 
@@ -268,6 +333,13 @@ All services provide an endpoint to check their operational status.
           "app_version": "1.0.0"
         }
         ```
+    *   *GigaChat:*
+        ```json
+        {
+          "status": "ok",
+          "service": "GigaChat Service"
+        }
+        ```
     *   *Cloud Vision:*
         ```json
         {
@@ -276,6 +348,7 @@ All services provide an endpoint to check their operational status.
         ```
 *   **Example (curl):**
     ```bash
-    curl -X GET http://localhost:8000/health/
-    curl -X GET http://localhost:8001/health/
+    curl -X GET http://localhost:8000/health
+    curl -X GET http://localhost:8001/health
+    curl -X GET http://localhost:8005/health # GigaChat health check
     curl -X GET http://localhost:8002/health

@@ -13,6 +13,8 @@ services:
       # Mount the app directory for live reloading during development
       - ./ocr_gemini_service/app:/app/app
     container_name: ocr_gemini_service
+    networks: # Add network
+      - hyper_ocr_network
 
   ocr_grok_vision_service:
     build:
@@ -26,3 +28,25 @@ services:
       # Mount the app directory for live reloading during development
       - ./ocr_grok_vision_service/app:/app/app
     container_name: ocr_grok_vision_service
+    networks: # Add network
+      - hyper_ocr_network
+
+  gigachat_service:
+    build:
+      context: ./gigachat_service
+      dockerfile: Dockerfile
+    ports:
+      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
+      - "${GIGACHAT_SERVICE_PORT:-8005}:${APP_PORT:-8005}"
+    env_file:
+      - ./gigachat_service/.env
+    volumes:
+      # Mount for live reloading during development
+      - ./gigachat_service:/app
+    container_name: gigachat_service
+    networks: # Add network
+      - hyper_ocr_network
+
+networks: # Define the common network
+  hyper_ocr_network:
+    driver: bridge
