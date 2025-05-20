@@ -1,36 +1,36 @@
 version: '3.8'
 
 services:
-  # Auth Service and dependencies
-  auth-service:
-    build:
-      context: ./auth_service
-      dockerfile: Dockerfile
-    container_name: auth-service
-    restart: unless-stopped
-    ports:
-      - "8800:8800"
-    env_file:
-      - ./auth_service/.env.example # Assuming .env.example holds defaults, adjust if .env is required
-    depends_on:
-      redis:
-        condition: service_healthy # Depend on redis being healthy
-    networks:
-      - api-gateway-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8800/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
+#  # Auth Service and dependencies
+#  auth-service:
+#    build:
+#      context: ./auth_service
+#      dockerfile: Dockerfile
+#    container_name: auth-service
+#    restart: unless-stopped
+#    ports:
+#      - "8800:8800"
+#    env_file:
+#      - ./auth_service/.env.example # Assuming .env.example holds defaults, adjust if .env is required
+#    depends_on:
+#      redis:
+#        condition: service_healthy # Depend on redis being healthy
+#    networks:
+#      - api-gateway-network
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:8800/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#      start_period: 40s
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 512M
+#          cpus: '0.5'
+#        reservations:
+#          memory: 256M
+#          cpus: '0.25'
 
   redis:
     image: redis:6
@@ -67,14 +67,19 @@ services:
     container_name: ocr_gemini_service
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "6161:6161" # Mapped to internal service port
     env_file:
-      - ./ocr_gemini_service/.env.example # Assuming .env.example
+      - ./ocr_gemini_service/.env
     volumes:
       - ./ocr_gemini_service/app:/app/app
     networks:
       - hyper_ocr_network
-    # Add healthcheck if available in the service
+    healthcheck: # Added healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:6161/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   ocr_grok_vision_service:
     build:
@@ -83,80 +88,85 @@ services:
     container_name: ocr_grok_vision_service
     restart: unless-stopped
     ports:
-      - "8001:8000"
+      - "6262:6262" # Mapped to internal service port
     env_file:
-      - ./ocr_grok_vision_service/.env.example # Assuming .env.example
+      - ./ocr_grok_vision_service/.env
     volumes:
       - ./ocr_grok_vision_service/app:/app/app
     networks:
       - hyper_ocr_network
-    # Add healthcheck if available in the service
+    healthcheck: # Added healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:6262/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  ocr_cloud_vision_service: # Added Service
-    build:
-      context: ./ocr_cloud_vision_service
-      dockerfile: Dockerfile
-    container_name: ocr_cloud_vision_service
-    restart: unless-stopped
-    ports:
-      - "8002:8000" # Assign new port
-    env_file:
-      - ./ocr_cloud_vision_service/.env.example # Assuming .env.example
-    volumes:
-      - ./ocr_cloud_vision_service/app:/app/app # Assuming similar structure
-    networks:
-      - hyper_ocr_network
-    # Add healthcheck if available in the service
+#  ocr_cloud_vision_service: # Added Service
+#    build:
+#      context: ./ocr_cloud_vision_service
+#      dockerfile: Dockerfile
+#    container_name: ocr_cloud_vision_service
+#    restart: unless-stopped
+#    ports:
+#      - "8002:8000" # Assign new port
+#    env_file:
+#      - ./ocr_cloud_vision_service/.env.example # Assuming .env.example
+#    volumes:
+#      - ./ocr_cloud_vision_service/app:/app/app # Assuming similar structure
+#    networks:
+#      - hyper_ocr_network
+#    # Add healthcheck if available in the service
 
-  ocr_pytesseract_service: # Added Service
-    build:
-      context: ./ocr_pytesseract_service
-      dockerfile: Dockerfile
-    container_name: ocr_pytesseract_service
-    restart: unless-stopped
-    ports:
-      - "8003:8000" # Assign new port
-    env_file:
-      - ./ocr_pytesseract_service/.env.example # Assuming .env.example
-    volumes:
-      - ./ocr_pytesseract_service/app:/app/app # Assuming similar structure
-    networks:
-      - hyper_ocr_network
-    # Add healthcheck if available in the service
+#  ocr_pytesseract_service: # Added Service
+#    build:
+#      context: ./ocr_pytesseract_service
+#      dockerfile: Dockerfile
+#    container_name: ocr_pytesseract_service
+#    restart: unless-stopped
+#    ports:
+#      - "8003:8000" # Assign new port
+#    env_file:
+#      - ./ocr_pytesseract_service/.env.example # Assuming .env.example
+#    volumes:
+#      - ./ocr_pytesseract_service/app:/app/app # Assuming similar structure
+#    networks:
+#      - hyper_ocr_network
+#    # Add healthcheck if available in the service
 
-  # Other AI/Utility Services
-  gigachat_service:
-    build:
-      context: ./gigachat_service
-      dockerfile: Dockerfile
-    container_name: gigachat_service
-    restart: unless-stopped
-    ports:
-      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
-      - "${GIGACHAT_SERVICE_PORT:-8005}:${APP_PORT:-8005}"
-    env_file:
-      - ./gigachat_service/.env.example # Assuming .env.example
-    volumes:
-      - ./gigachat_service:/app # Mounts the whole directory
-    networks:
-      - hyper_ocr_network
-    # Add healthcheck if available in the service
+#  # Other AI/Utility Services
+#  gigachat_service:
+#    build:
+#      context: ./gigachat_service
+#      dockerfile: Dockerfile
+#    container_name: gigachat_service
+#    restart: unless-stopped
+#    ports:
+#      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
+#      - "${GIGACHAT_SERVICE_PORT:-8005}:${APP_PORT:-8005}"
+#    env_file:
+#      - ./gigachat_service/.env.example # Assuming .env.example
+#    volumes:
+#      - ./gigachat_service:/app # Mounts the whole directory
+#    networks:
+#      - hyper_ocr_network
+#    # Add healthcheck if available in the service
 
-  split_bill_service: # Added Service
-    build:
-      context: ./split_bill_service
-      dockerfile: Dockerfile
-    container_name: split_bill_service
-    restart: unless-stopped
-    ports:
-      - "8004:8000" # Assign new port
-    env_file:
-      - ./split_bill_service/.env.example # Assuming .env.example
-    volumes:
-      - ./split_bill_service/app:/app/app # Assuming similar structure
-    networks:
-      - hyper_ocr_network
-    # Add healthcheck if available in the service
+#  split_bill_service: # Added Service
+#    build:
+#      context: ./split_bill_service
+#      dockerfile: Dockerfile
+#    container_name: split_bill_service
+#    restart: unless-stopped
+#    ports:
+#      - "8004:8000" # Assign new port
+#    env_file:
+#      - ./split_bill_service/.env.example # Assuming .env.example
+#    volumes:
+#      - ./split_bill_service/app:/app/app # Assuming similar structure
+#    networks:
+#      - hyper_ocr_network
+#    # Add healthcheck if available in the service
 
   # Kong API Gateway and dependencies
   kong-database:
@@ -215,7 +225,12 @@ services:
         reservations:
           memory: 512M
           cpus: '0.5'
-    # Add healthcheck
+    healthcheck: # Added healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:8001/status"] # Check Kong Admin API status
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   konga:
     image: pantsel/konga:latest
@@ -231,7 +246,12 @@ services:
       - "7337:1337"
     networks:
       - kong-net
-    # Add healthcheck
+    healthcheck: # Added healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:1337"] # Check Konga UI
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Monitoring Stack
   prometheus:
@@ -253,40 +273,13 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
-    # Add healthcheck
+    healthcheck: # Added healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:9090"] # Check Prometheus UI
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  grafana:
-    image: grafana/grafana-oss # Use OSS version unless enterprise features are needed
-    container_name: grafana
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin # CHANGE THIS IN PRODUCTION
-    ports:
-      - "3000:3000"
-    networks:
-      - monitoring-net
-    depends_on:
-      - prometheus
-    volumes:
-      - grafana_data:/var/lib/grafana
-    # Add healthcheck
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: uptime-kuma
-    restart: unless-stopped
-    volumes:
-      - uptime-kuma-data:/app/data
-    ports:
-      - "3001:3001"
-    networks:
-      - monitoring-net
-    # Healthcheck is commented out, enable if desired
-    # healthcheck:
-    #   test: ["CMD", "wget", "--spider", "http://localhost:3001"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
 
 networks:
   api-gateway-network:
@@ -301,6 +294,4 @@ networks:
 volumes:
   redis_data:
   kong-data:
-  grafana_data:
-  uptime-kuma-data:
-  prometheus_data: # Added volume for Prometheus persistence
+  prometheus_data:

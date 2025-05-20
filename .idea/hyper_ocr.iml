@@ -6,8 +6,8 @@
       <excludeFolder url="file://$MODULE_DIR$/ocr_gemini_service/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/ocr_gemini_service/.venv/Lib" />
       <excludeFolder url="file://$MODULE_DIR$/ocr_gemini_service/.venv/Scripts" />
-      <excludeFolder url="file://$MODULE_DIR$/ocr_cloud_vision/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/ocr_pytesseract_service/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/ocr_cloud_vision_service/.venv" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.11 (hyper_ocr)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
