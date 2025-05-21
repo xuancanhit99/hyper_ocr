@@ -135,22 +135,27 @@ services:
 #    # Add healthcheck if available in the service
 
 #  # Other AI/Utility Services
-#  gigachat_service:
-#    build:
-#      context: ./gigachat_service
-#      dockerfile: Dockerfile
-#    container_name: gigachat_service
-#    restart: unless-stopped
-#    ports:
-#      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
-#      - "${GIGACHAT_SERVICE_PORT:-8005}:${APP_PORT:-8005}"
-#    env_file:
-#      - ./gigachat_service/.env.example # Assuming .env.example
-#    volumes:
-#      - ./gigachat_service:/app # Mounts the whole directory
-#    networks:
-#      - hyper_ocr_network
-#    # Add healthcheck if available in the service
+  gigachat_service:
+    build:
+      context: ./gigachat_service
+      dockerfile: Dockerfile
+    container_name: gigachat_service
+    restart: unless-stopped
+    ports:
+      # Use the port defined in gigachat_service/.env (defaults to 8005 if not set)
+      - "6363:6363"
+    env_file:
+      - ./gigachat_service/.env # Use the actual .env file
+    volumes:
+      - ./gigachat_service:/app # Mounts the whole directory
+    networks:
+      - hyper_ocr_network
+    healthcheck: # Added healthcheck
+      test: ["CMD", "curl", "-f", "http://localhost:6363/health"] # Check health endpoint
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 #  split_bill_service: # Added Service
 #    build:

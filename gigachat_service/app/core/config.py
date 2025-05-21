@@ -2,9 +2,10 @@ import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import logging
+from functools import lru_cache # Import lru_cache
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv() # pydantic-settings can also load .env automatically
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     GIGACHAT_TOKEN_URL: str = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
     GIGACHAT_CHAT_URL: str = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 
-    APP_PORT: int = 8005
+    APP_PORT: int = 6363
     LOG_LEVEL: str = "INFO"
 
     class Config:
@@ -24,8 +25,14 @@ class Settings(BaseSettings):
         env_file_encoding = 'utf-8'
         extra = 'ignore' # Ignore extra fields from environment
 
-# Instantiate settings
-settings = Settings()
+# Function to get cached settings
+@lru_cache()
+def get_settings():
+    """Get application settings with caching."""
+    return Settings()
+
+# Instantiate settings using the cached function
+settings = get_settings()
 
 # Configure logging
 logging.basicConfig(level=settings.LOG_LEVEL.upper(),

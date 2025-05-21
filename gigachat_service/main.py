@@ -20,7 +20,7 @@ app = FastAPI(title="GigaChat Service", version="1.0.0")
 
 
 # Include routers
-app.include_router(chat.router, tags=["Chat"]) # Removed prefix="/api/v1"
+app.include_router(chat.router, prefix="/chat", tags=["Chat"])
 app.include_router(health.router, tags=["Health"]) # Include health router
 
 # Entry point for running the application directly (e.g., for local development)

@@ -1,76 +1,114 @@
-from fastapi import APIRouter, HTTPException, status, Body
-from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Header
+from fastapi.responses import JSONResponse, StreamingResponse
+from typing import Optional, Dict, Any
+import logging
 
-from app.models.schemas import ChatServiceRequest, ChatServiceResponse, GigaChatMessageOutput, GigaChatUsage
-from app.services.gigachat_service import get_chat_completion
-from app.core.config import logger
+from app.core.config import settings # Import settings
+from app.services.gigachat_service import GigaChatService
+from app.models.schemas import ChatCompletionRequest # Assume this schema exists
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-@router.post(
-    "/chat",
-    response_model=ChatServiceResponse,
-    summary="Process chat messages with GigaChat",
-    description="Receives a list of messages and returns the GigaChat model's response.",
-    tags=["Chat"]
-)
-async def process_chat(
-    request_data: Annotated[ChatServiceRequest, Body(
-        examples=[
-            {
-                "messages": [
-                    {"role": "user", "content": "Привет! Как дела?"}
-                ],
-                "model": "GigaChat-Pro",
-                "temperature": 0.7
-            }
-        ],
-    )]
+async def get_gigachat_service(
+    gigachat_auth_key: Optional[str] = Header(None, alias="x-api-key", description="Optional GigaChat Authorization Key via x-api-key header")
+) -> GigaChatService:
+    """Dependency to get GigaChatService with optional header auth key."""
+    return GigaChatService(auth_key=gigachat_auth_key)
+
+
+@router.post("/generate-text")
+
+
+@router.post("/generate-text")
+async def create_chat_completion(
+    request_body: Dict[str, Any] = Body(...), # Accept flexible request body
+    gigachat_service: GigaChatService = Depends(get_gigachat_service) # Use the new dependency
 ):
     """
-    Endpoint to interact with the GigaChat model.
-
-    - Takes a list of messages representing the conversation history.
-    - Optionally allows overriding the default model and other parameters.
-    - Calls the GigaChat API via the service layer.
-    - Returns the assistant's response along with model and usage info.
+    Creates a chat completion using the GigaChat API, mimicking OpenAI structure,
+    with support for Grok-like request formats.
     """
-    logger.info(f"Received chat request with {len(request_data.messages)} messages.")
-    # logger.debug(f"Chat request data: {request_data.model_dump_json(indent=2)}") # Sensitive
-
     try:
-        # Call the service function to get the completion
-        giga_response = await get_chat_completion(request_data)
+        # Extract fields from the flexible request body
+        user_message = request_body.get("message")
+        history = request_body.get("history", []) # Default to empty list if history is not provided
+        model_name = request_body.get("model_name") # Grok uses model_name
+        temperature = request_body.get("temperature", 0.7) # Default temperature
+        max_tokens = request_body.get("max_tokens")
+        stream = request_body.get("stream", False) # Default to non-streaming
 
-        # Process the response
-        if not giga_response.choices:
-            logger.error("GigaChat response contained no choices.")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail="GigaChat returned no response choices.")
+        # Validate required fields (at least message is needed for a new turn)
+        if user_message is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Request body must contain a 'message' field."
+            )
+            
+        # Construct the messages list in OpenAI format expected by GigaChatService
+        # Include history first, then the current user message
+        messages = []
+        # Add history messages
+        for historical_message in history:
+             if "role" in historical_message and "content" in historical_message:
+                  messages.append({"role": historical_message["role"], "content": historical_message["content"]})
+             else:
+                  # Log a warning if history message format is unexpected
+                  logger.warning(f"Skipping malformed history message: {historical_message}")
 
-        # Assuming we only care about the first choice (n=1 is default)
-        first_choice = giga_response.choices[0]
-        assistant_message = first_choice.message
-        model_used = giga_response.model
-        usage_stats = giga_response.usage
+        # Add the current user message
+        messages.append({"role": "user", "content": user_message})
 
-        logger.info(f"Successfully processed chat request using model {model_used}.")
 
-        # Format the response according to ChatServiceResponse schema
-        service_response = ChatServiceResponse(
-            response=assistant_message,
-            model_used=model_used,
-            usage=usage_stats
-        )
-        # logger.debug(f"Sending chat response: {service_response.model_dump_json(indent=2)}") # Sensitive
+        # Determine the model to use
+        # Use model_name from request if provided, otherwise use default from settings
+        model_to_use = model_name or settings.GIGACHAT_DEFAULT_MODEL # Use imported settings
+        
+        if not model_to_use:
+             # This should ideally not happen if GIGACHAT_DEFAULT_MODEL is set,
+             # but as a safeguard.
+             raise HTTPException(
+                  status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                  detail="GigaChat model name is not provided and no default model is configured."
+             )
 
-        return service_response
 
-    except HTTPException as http_exc:
-        # Re-raise HTTPExceptions raised by the service layer
-        logger.warning(f"HTTPException during chat processing: {http_exc.status_code} - {http_exc.detail}")
-        raise http_exc
+        # Prepare parameters for GigaChatService
+        service_params = {
+            "model": model_to_use,
+            "messages": messages,
+            "temperature": temperature,
+            "stream": stream,
+            "max_tokens": max_tokens # Pass max_tokens if provided
+        }
+        
+        # Remove max_tokens if it's None, as GigaChatService expects int or None
+        if service_params["max_tokens"] is None:
+            del service_params["max_tokens"]
+
+        if stream:
+            # For streaming requests
+            generator = gigachat_service.create_chat_completion(
+               **service_params
+            )
+            # FastAPI's StreamingResponse handles the SSE formatting based on the generator
+            return StreamingResponse(generator, media_type="text/event-stream")
+        else:
+            # For non-streaming requests
+            response_data = await gigachat_service.create_chat_completion(
+                **service_params
+            )
+            # create_chat_completion already returns data in OpenAI format for non-stream
+            return JSONResponse(content=response_data)
+
+    except HTTPException as e:
+        logger.error(f"HTTPException in chat completion route: {e.detail} (Status: {e.status_code})")
+        # Re-raise HTTPExceptions raised by the service (e.g., auth errors, rate limits)
+        raise e
     except Exception as e:
-        logger.exception("An unexpected error occurred during chat processing.") # Log full traceback
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"An internal server error occurred: {e}")
+        logger.exception("An unexpected error occurred during chat completion processing.")
+        # Catch any other unexpected errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected internal error occurred: {e}"
+        )
