@@ -11,7 +11,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
 )
 
-app.include_router(ocr.router, prefix="/ocr", tags=["OCR"])
+app.include_router(ocr.router, prefix="/vision", tags=["OCR"])
 app.include_router(health.router, tags=["Health"]) # Add tag for consistency
 app.include_router(chat.router, prefix="/chat", tags=["Chat"]) # Include the chat router
 @app.get("/")

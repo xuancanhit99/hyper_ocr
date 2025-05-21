@@ -28,7 +28,7 @@ def get_chat_configured_service(
         )
 
 @router.post(
-    "/", # Endpoint will be /chat/
+    "/generate-text",
     response_model=ChatResponse,
     summary="Generate Text Response using Grok",
     responses={

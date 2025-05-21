@@ -13,7 +13,7 @@ app = FastAPI(
     # redoc_url="/redoc", # Uncomment if needed
 )
 
-app.include_router(ocr.router, prefix="/ocr", tags=["OCR"])
+app.include_router(ocr.router, prefix="/vision", tags=["OCR"]) # Thay đổi prefix thành "" để đường dẫn cuối cùng là /vision/extract-text
 app.include_router(health.router, tags=["Health"])
 app.include_router(chat.router, prefix="/chat", tags=["Chat"]) # Include the chat router
 
